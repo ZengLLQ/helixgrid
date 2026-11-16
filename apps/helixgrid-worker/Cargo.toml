@@ -1,0 +1,23 @@
+[package]
+name = "helixgrid-worker"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "helixgrid-worker"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+helixgrid-domain.workspace = true
+helixgrid-observability.workspace = true
+helixgrid-worker-runtime.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[build-dependencies]
+winresource.workspace = true

@@ -1,0 +1,801 @@
+import { Theme } from "../themes/tokens.slint";
+import { HxButton, ButtonVariant, HxTextField, HxSegmentedSwitch, HxBadge } from "primitives.slint";
+import { AboutSlint } from "std-widgets.slint";
+
+export component HxNavItem inherits Rectangle {
+    in property <string> label;
+    in property <image> icon;
+    in property <bool> active: false;
+    in property <string> badge-text: "";
+    callback clicked();
+
+    height: 36px;
+    border-radius: Theme.r-sm;
+    background: root.active ? Theme.accent-soft : (ta.has-hover ? Theme.surface-hover : transparent);
+    animate background { duration: Theme.anim-fast; }
+
+    accessible-role: tab;
+    accessible-label: root.label;
+    accessible-item-selectable: true;
+    accessible-item-selected: root.active;
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+
+    HorizontalLayout {
+        padding-left: Theme.s12;
+        padding-right: Theme.s12;
+        spacing: Theme.s12;
+        alignment: space-between;
+
+        HorizontalLayout {
+            spacing: Theme.s12;
+            Image {
+                source: root.icon;
+                width: 17px;
+                height: 17px;
+                y: (parent.height - self.height) / 2;
+                colorize: root.active ? Theme.accent : Theme.text-secondary;
+            }
+            Text {
+                text: root.label;
+                font-family: Theme.font-family;
+                font-size: Theme.type-body;
+                font-weight: root.active ? 600 : 500;
+                color: root.active ? Theme.text-primary : Theme.text-secondary;
+                vertical-alignment: center;
+            }
+        }
+
+        if root.badge-text != "" : Rectangle {
+            min-width: 22px;
+            height: 18px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 9px;
+            background: Theme.surface-elevated;
+            border-width: 1px;
+            border-color: Theme.border;
+            HorizontalLayout {
+                padding-left: 6px;
+                padding-right: 6px;
+                Text {
+                    text: root.badge-text;
+                    font-family: Theme.font-family;
+                    font-size: Theme.type-caption;
+                    font-weight: 500;
+                    color: Theme.text-secondary;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}
+
+export component HxSidebar inherits Rectangle {
+    in-out property <int> active-nav: 0;
+    in property <string> engine-health-text: "Healthy";
+    in property <int> engine-health-tone: 2;
+    in property <int> active-workers-count: 0;
+    in property <int> running-workloads-count: 0;
+    callback navigate(int);
+
+    width: 224px;
+    background: Theme.surface;
+
+    // Right hairline border
+    Rectangle {
+        x: parent.width - 1px;
+        y: 0px;
+        width: 1px;
+        height: parent.height;
+        background: Theme.border;
+    }
+
+    VerticalLayout {
+        padding: Theme.s16;
+        spacing: Theme.s16;
+        alignment: space-between;
+
+        VerticalLayout {
+            spacing: Theme.s24;
+
+            // Brand header (minimal mark + name)
+            HorizontalLayout {
+                spacing: Theme.s12;
+                padding-left: Theme.s4;
+                Image {
+                    source: @image-url("../../assets/branding/helixgrid-mark.svg");
+                    width: 28px;
+                    height: 28px;
+                }
+                VerticalLayout {
+                    spacing: 0px;
+                    Text {
+                        text: "HelixGrid";
+                        font-family: Theme.font-family;
+                        font-size: 16px;
+                        font-weight: 600;
+                        color: Theme.text-primary;
+                    }
+                    Text {
+                        text: "Local Compute Fabric";
+                        font-family: Theme.font-family;
+                        font-size: Theme.type-caption;
+                        color: Theme.text-secondary;
+                    }
+                }
+            }
+
+            // Primary 8-item navigation
+            VerticalLayout {
+                spacing: Theme.s4;
+
+                HxNavItem {
+                    label: "Overview";
+                    icon: @image-url("../../assets/icons/overview.svg");
+                    active: root.active-nav == 0;
+                    clicked => { root.navigate(0); }
+                }
+                HxNavItem {
+                    label: "Workers";
+                    icon: @image-url("../../assets/icons/workers.svg");
+                    active: root.active-nav == 1;
+                    badge-text: root.active-workers-count > 0 ? "" + root.active-workers-count : "";
+                    clicked => { root.navigate(1); }
+                }
+                HxNavItem {
+                    label: "Workloads";
+                    icon: @image-url("../../assets/icons/workloads.svg");
+                    active: root.active-nav == 2;
+                    badge-text: root.running-workloads-count > 0 ? "" + root.running-workloads-count : "";
+                    clicked => { root.navigate(2); }
+                }
+                HxNavItem {
+                    label: "Workflows";
+                    icon: @image-url("../../assets/icons/workflows.svg");
+                    active: root.active-nav == 3;
+                    clicked => { root.navigate(3); }
+                }
+                HxNavItem {
+                    label: "Analytics";
+                    icon: @image-url("../../assets/icons/analytics.svg");
+                    active: root.active-nav == 4;
+                    clicked => { root.navigate(4); }
+                }
+                HxNavItem {
+                    label: "Activity";
+                    icon: @image-url("../../assets/icons/activity.svg");
+                    active: root.active-nav == 5;
+                    clicked => { root.navigate(5); }
+                }
+                HxNavItem {
+                    label: "Settings";
+                    icon: @image-url("../../assets/icons/settings.svg");
+                    active: root.active-nav == 6;
+                    clicked => { root.navigate(6); }
+                }
+                HxNavItem {
+                    label: "Diagnostics";
+                    icon: @image-url("../../assets/icons/diagnostics.svg");
+                    active: root.active-nav == 7;
+                    clicked => { root.navigate(7); }
+                }
+            }
+        }
+
+        // Calm status footer (single-machine indicator + engine health)
+        Rectangle {
+            border-radius: Theme.r-md;
+            background: Theme.bg;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            VerticalLayout {
+                padding: Theme.s12;
+                spacing: Theme.s8;
+                HorizontalLayout {
+                    alignment: space-between;
+                    Text {
+                        text: "Engine";
+                        font-family: Theme.font-family;
+                        font-size: Theme.type-caption;
+                        color: Theme.text-secondary;
+                        vertical-alignment: center;
+                    }
+                    HxBadge {
+                        text: root.engine-health-text;
+                        tone: root.engine-health-tone;
+                    }
+                }
+                Text {
+                    text: "Single-Machine Mode · v1";
+                    font-family: Theme.font-family;
+                    font-size: Theme.type-caption;
+                    color: Theme.text-secondary;
+                }
+            }
+        }
+    }
+}
+
+export component HxToast inherits Rectangle {
+    in property <string> message;
+    in property <bool> is-error: false;
+    callback dismiss();
+
+    border-radius: Theme.r-md;
+    background: Theme.surface-elevated;
+    border-width: 1px;
+    border-color: root.is-error ? Theme.danger-fg : Theme.border;
+    drop-shadow-blur: 16px;
+    drop-shadow-color: #00000040;
+
+    HorizontalLayout {
+        padding: Theme.s12;
+        spacing: Theme.s12;
+        alignment: space-between;
+
+        Text {
+            text: root.message;
+            font-family: Theme.font-family;
+            font-size: Theme.type-body;
+            color: root.is-error ? Theme.danger-fg : Theme.text-primary;
+            wrap: word-wrap;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+        HxButton {
+            label: "Dismiss";
+            variant: ButtonVariant.ghost;
+            control-height: 28px;
+            clicked => { root.dismiss(); }
+        }
+    }
+}
+
+export component HxConfirmDialog inherits Rectangle {
+    in property <string> title;
+    in property <string> message;
+    in property <string> confirm-label: "Confirm";
+    in property <bool> destructive: false;
+    callback confirmed();
+    callback cancelled();
+
+    background: #00000080;
+    TouchArea {} // modal scrim
+
+    Rectangle {
+        width: 440px;
+        border-radius: Theme.r-lg;
+        background: Theme.surface;
+        border-width: 1px;
+        border-color: Theme.border;
+        drop-shadow-blur: 24px;
+        drop-shadow-color: #00000060;
+
+        VerticalLayout {
+            padding: Theme.s24;
+            spacing: Theme.s16;
+
+            Text {
+                text: root.title;
+                font-family: Theme.font-family;
+                font-size: Theme.type-title;
+                font-weight: 600;
+                color: Theme.text-primary;
+            }
+            Text {
+                text: root.message;
+                font-family: Theme.font-family;
+                font-size: Theme.type-body;
+                color: Theme.text-secondary;
+                wrap: word-wrap;
+            }
+            HorizontalLayout {
+                alignment: end;
+                spacing: Theme.s8;
+                HxButton {
+                    label: "Cancel";
+                    variant: ButtonVariant.secondary;
+                    clicked => { root.cancelled(); }
+                }
+                HxButton {
+                    label: root.confirm-label;
+                    variant: root.destructive ? ButtonVariant.destructive : ButtonVariant.primary;
+                    clicked => { root.confirmed(); }
+                }
+            }
+        }
+    }
+}
+
+export component HxAboutDialog inherits Rectangle {
+    in property <string> app-version: "0.1.0";
+    callback close();
+
+    background: #00000080;
+    TouchArea {}
+
+    Rectangle {
+        width: 460px;
+        border-radius: Theme.r-lg;
+        background: Theme.surface;
+        border-width: 1px;
+        border-color: Theme.border;
+        drop-shadow-blur: 24px;
+        drop-shadow-color: #00000060;
+
+        VerticalLayout {
+            padding: Theme.s24;
+            spacing: Theme.s16;
+
+            HorizontalLayout {
+                spacing: Theme.s12;
+                Image {
+                    source: @image-url("../../assets/branding/helixgrid.png");
+                    width: 44px;
+                    height: 44px;
+                }
+                VerticalLayout {
+                    spacing: 2px;
+                    Text {
+                        text: "HelixGrid Studio";
+                        font-family: Theme.font-family;
+                        font-size: Theme.type-title;
+                        font-weight: 600;
+                        color: Theme.text-primary;
+                    }
+                    Text {
+                        text: "Version " + root.app-version + " · Single-Machine Compute Fabric (Windows 11 x64)";
+                        font-family: Theme.font-family;
+                        font-size: Theme.type-caption;
+                        color: Theme.text-secondary;
+                    }
+                }
+            }
+
+            Text {
+                text: "Powered by Rust, Windows Job Objects, Named Pipes, SQLite (WAL), and Poppins (SIL OFL 1.1).";
+                font-family: Theme.font-family;
+                font-size: Theme.type-body;
+                color: Theme.text-secondary;
+                wrap: word-wrap;
+            }
+
+            Rectangle {
+                border-radius: Theme.r-md;
+                background: Theme.bg;
+                border-width: 1px;
+                border-color: Theme.border;
+                height: 112px;
+                AboutSlint {
+                    width: parent.width;
+                    height: parent.height;
+                }
+            }
+
+            HorizontalLayout {
+                alignment: end;
+                HxButton {
+                    label: "Close";
+                    variant: ButtonVariant.primary;
+                    clicked => { root.close(); }
+                }
+            }
+        }
+    }
+}
+
+export component HxSubmitWorkloadDialog inherits Rectangle {
+    in-out property <string> name: "CPU Prime Benchmark";
+    in-out property <string> description: "";
+    in-out property <int> type-idx: 0;       // 0=Benchmark, 1=Batch, 2=Numerical, 3=RegisteredExe
+    in-out property <int> priority-idx: 1;   // 0=Low, 1=Normal, 2=High, 3=Critical
+    in-out property <string> param-a: "2";   // threads / item_count / dimension / registered_id
+    in-out property <string> param-b: "1500"; // iterations / batch_size / max_iters / args
+    in-out property <string> param-c: "10000"; // sieve_limit / input_dir / algo(0..3) / working_dir
+    in-out property <string> cpu-cores: "1";
+    in-out property <string> memory-mb: "128";
+    in-out property <string> timeout-sec: "60";
+    in-out property <string> validation-error: "";
+    in property <[string]> registered-exe-ids: [];
+    callback pick-folder();
+    callback submit();
+    callback cancel();
+
+    background: #00000080;
+    TouchArea {}
+
+    Rectangle {
+        width: 560px;
+        border-radius: Theme.r-lg;
+        background: Theme.surface;
+        border-width: 1px;
+        border-color: Theme.border;
+        drop-shadow-blur: 24px;
+        drop-shadow-color: #00000060;
+
+        VerticalLayout {
+            padding: Theme.s24;
+            spacing: Theme.s16;
+
+            Text {
+                text: "Submit Compute Workload";
+                font-family: Theme.font-family;
+                font-size: Theme.type-title;
+                font-weight: 600;
+                color: Theme.text-primary;
+            }
+
+            HxSegmentedSwitch {
+                options: ["Benchmark", "Batch", "Numerical", "Registered Exe"];
+                current-index <=> root.type-idx;
+                selected(idx) => {
+                    root.validation-error = "";
+                    if (idx == 0) {
+                        root.name = "CPU Prime Benchmark";
+                        root.param-a = "2";
+                        root.param-b = "1500";
+                        root.param-c = "10000";
+                    } else if (idx == 1) {
+                        root.name = "Batch Record Transform";
+                        root.param-a = "5000";
+                        root.param-b = "250";
+                        root.param-c = "";
+                    } else if (idx == 2) {
+                        root.name = "Conjugate Gradient Solver";
+                        root.param-a = "1000";
+                        root.param-b = "2000";
+                        root.param-c = "1";
+                    } else {
+                        root.name = "Registered External Task";
+                        root.param-a = "";
+                        root.param-b = "";
+                        root.param-c = "";
+                    }
+                }
+            }
+
+            HxTextField {
+                label: "Workload Name";
+                text <=> root.name;
+                placeholder: "Descriptive name";
+            }
+
+            HorizontalLayout {
+                spacing: Theme.s12;
+                HxTextField {
+                    horizontal-stretch: 1;
+                    label: {
+                        if (root.type-idx == 0) { "Worker Threads (1-64)" }
+                        else if (root.type-idx == 1) { "Record Count" }
+                        else if (root.type-idx == 2) { "Dimension (N)" }
+                        else { "Registered Executable ID" }
+                    }
+                    text <=> root.param-a;
+                }
+                HxTextField {
+                    horizontal-stretch: 1;
+                    label: {
+                        if (root.type-idx == 0) { "Iterations" }
+                        else if (root.type-idx == 1) { "Batch Size" }
+                        else if (root.type-idx == 2) { "Max Iterations / Steps" }
+                        else { "Arguments (space-separated)" }
+                    }
+                    text <=> root.param-b;
+                }
+            }
+
+            HorizontalLayout {
+                spacing: Theme.s8;
+                alignment: end;
+                HxTextField {
+                    horizontal-stretch: 1;
+                    label: {
+                        if (root.type-idx == 0) { "Prime Sieve Limit" }
+                        else if (root.type-idx == 1) { "Input Folder (blank = generated batch)" }
+                        else if (root.type-idx == 2) { "Algorithm (0=MatMul, 1=CG, 2=MonteCarlo, 3=RK4)" }
+                        else { "Working Directory" }
+                    }
+                    text <=> root.param-c;
+                }
+                if root.type-idx == 1 || root.type-idx == 3 : VerticalLayout {
+                    alignment: end;
+                    HxButton {
+                        label: "Browse…";
+                        icon: @image-url("../../assets/icons/folder.svg");
+                        has-icon: true;
+                        clicked => { root.pick-folder(); }
+                    }
+                }
+            }
+
+            VerticalLayout {
+                spacing: Theme.s4;
+                Text {
+                    text: "Priority";
+                    font-family: Theme.font-family;
+                    font-size: Theme.type-caption;
+                    font-weight: 500;
+                    color: Theme.text-secondary;
+                }
+                HxSegmentedSwitch {
+                    options: ["Low", "Normal", "High", "Critical"];
+                    current-index <=> root.priority-idx;
+                }
+            }
+
+            HorizontalLayout {
+                spacing: Theme.s12;
+                HxTextField {
+                    horizontal-stretch: 1;
+                    label: "Reserved Cores";
+                    text <=> root.cpu-cores;
+                }
+                HxTextField {
+                    horizontal-stretch: 1;
+                    label: "Reserved Memory (MB)";
+                    text <=> root.memory-mb;
+                }
+                HxTextField {
+                    horizontal-stretch: 1;
+                    label: "Timeout (sec)";
+                    text <=> root.timeout-sec;
+                }
+            }
+
+            if root.validation-error != "" : Text {
+                text: root.validation-error;
+                font-family: Theme.font-family;
+                font-size: Theme.type-caption;
+                font-weight: 500;
+                color: Theme.danger-fg;
+                wrap: word-wrap;
+            }
+
+            HorizontalLayout {
+                alignment: end;
+                spacing: Theme.s8;
+                HxButton {
+                    label: "Cancel";
+                    variant: ButtonVariant.secondary;
+                    clicked => { root.cancel(); }
+                }
+                HxButton {
+                    label: "Queue Workload";
+                    variant: ButtonVariant.primary;
+                    clicked => { root.submit(); }
+                }
+            }
+        }
+    }
+}
+
+export component HxCreateWorkflowDialog inherits Rectangle {
+    in-out property <string> name: "Research Compute Pipeline";
+    in-out property <string> description: "Three-stage DAG: Benchmark -> Matrix Solve -> Batch Aggregate";
+    in-out property <int> template-idx: 0; // 0=3-stage DAG, 1=Fan-out/Fan-in 4-stage DAG
+    in-out property <string> stage1-iterations: "800";
+    in-out property <string> stage2-dimension: "180";
+    in-out property <string> stage3-items: "3000";
+    in-out property <string> validation-error: "";
+    callback create-and-run();
+    callback cancel();
+
+    background: #00000080;
+    TouchArea {}
+
+    Rectangle {
+        width: 520px;
+        border-radius: Theme.r-lg;
+        background: Theme.surface;
+        border-width: 1px;
+        border-color: Theme.border;
+        drop-shadow-blur: 24px;
+        drop-shadow-color: #00000060;
+
+        VerticalLayout {
+            padding: Theme.s24;
+            spacing: Theme.s16;
+
+            Text {
+                text: "Create Multi-Stage Workflow";
+                font-family: Theme.font-family;
+                font-size: Theme.type-title;
+                font-weight: 600;
+                color: Theme.text-primary;
+            }
+
+            HxSegmentedSwitch {
+                options: ["Linear 3-Stage DAG", "Diamond Fan-Out 4-Stage DAG"];
+                current-index <=> root.template-idx;
+            }
+
+            HxTextField {
+                label: "Workflow Name";
+                text <=> root.name;
+            }
+            HxTextField {
+                label: "Description";
+                text <=> root.description;
+            }
+
+            HorizontalLayout {
+                spacing: Theme.s12;
+                HxTextField {
+                    horizontal-stretch: 1;
+                    label: "Stage 1 Bench Iterations";
+                    text <=> root.stage1-iterations;
+                }
+                HxTextField {
+                    horizontal-stretch: 1;
+                    label: "Stage 2 Matrix Dimension";
+                    text <=> root.stage2-dimension;
+                }
+                HxTextField {
+                    horizontal-stretch: 1;
+                    label: "Final Batch Records";
+                    text <=> root.stage3-items;
+                }
+            }
+
+            Rectangle {
+                border-radius: Theme.r-sm;
+                background: Theme.bg;
+                border-width: 1px;
+                border-color: Theme.border;
+                VerticalLayout {
+                    padding: Theme.s12;
+                    Text {
+                        text: root.template-idx == 0
+                            ? "DAG Topology: [1. CPU Prep] → [2. Numerical Matrix] → [3. Batch Summary]"
+                            : "DAG Topology: [1. CPU Seed] → ([2a. Matrix Multiply] + [2b. Monte Carlo]) → [3. Final Aggregation]";
+                        font-family: Theme.font-family;
+                        font-size: Theme.type-caption;
+                        color: Theme.text-secondary;
+                        wrap: word-wrap;
+                    }
+                }
+            }
+
+            if root.validation-error != "" : Text {
+                text: root.validation-error;
+                font-family: Theme.font-family;
+                font-size: Theme.type-caption;
+                color: Theme.danger-fg;
+                wrap: word-wrap;
+            }
+
+            HorizontalLayout {
+                alignment: end;
+                spacing: Theme.s8;
+                HxButton {
+                    label: "Cancel";
+                    variant: ButtonVariant.secondary;
+                    clicked => { root.cancel(); }
+                }
+                HxButton {
+                    label: "Launch Workflow";
+                    variant: ButtonVariant.primary;
+                    clicked => { root.create-and-run(); }
+                }
+            }
+        }
+    }
+}
+
+export component HxRegisterExeDialog inherits Rectangle {
+    in-out property <string> exe-id: "";
+    in-out property <string> display-name: "";
+    in-out property <string> executable-path: "";
+    in-out property <string> allowed-working-dir: "";
+    in-out property <string> description: "";
+    in-out property <bool> idempotent-safe: false;
+    in-out property <string> validation-error: "";
+    callback pick-executable();
+    callback pick-working-dir();
+    callback save();
+    callback cancel();
+
+    background: #00000080;
+    TouchArea {}
+
+    Rectangle {
+        width: 540px;
+        border-radius: Theme.r-lg;
+        background: Theme.surface;
+        border-width: 1px;
+        border-color: Theme.border;
+        drop-shadow-blur: 24px;
+        drop-shadow-color: #00000060;
+
+        VerticalLayout {
+            padding: Theme.s24;
+            spacing: Theme.s16;
+
+            Text {
+                text: "Register Allowed Executable";
+                font-family: Theme.font-family;
+                font-size: Theme.type-title;
+                font-weight: 600;
+                color: Theme.text-primary;
+            }
+
+            HorizontalLayout {
+                spacing: Theme.s12;
+                HxTextField {
+                    horizontal-stretch: 1;
+                    label: "Identifier (e.g. data-tool)";
+                    text <=> root.exe-id;
+                }
+                HxTextField {
+                    horizontal-stretch: 1;
+                    label: "Display Name";
+                    text <=> root.display-name;
+                }
+            }
+
+            HorizontalLayout {
+                spacing: Theme.s8;
+                HxTextField {
+                    horizontal-stretch: 1;
+                    label: "Executable Path (.exe)";
+                    text <=> root.executable-path;
+                }
+                VerticalLayout {
+                    alignment: end;
+                    HxButton {
+                        label: "Select File…";
+                        clicked => { root.pick-executable(); }
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                spacing: Theme.s8;
+                HxTextField {
+                    horizontal-stretch: 1;
+                    label: "Restricted Working Directory";
+                    text <=> root.allowed-working-dir;
+                }
+                VerticalLayout {
+                    alignment: end;
+                    HxButton {
+                        label: "Select Folder…";
+                        clicked => { root.pick-working-dir(); }
+                    }
+                }
+            }
+
+            HxTextField {
+                label: "Purpose / Notes";
+                text <=> root.description;
+            }
+
+            if root.validation-error != "" : Text {
+                text: root.validation-error;
+                font-family: Theme.font-family;
+                font-size: Theme.type-caption;
+                color: Theme.danger-fg;
+                wrap: word-wrap;
+            }
+
+            HorizontalLayout {
+                alignment: end;
+                spacing: Theme.s8;
+                HxButton {
+                    label: "Cancel";
+                    variant: ButtonVariant.secondary;
+                    clicked => { root.cancel(); }
+                }
+                HxButton {
+                    label: "Register Executable";
+                    variant: ButtonVariant.primary;
+                    clicked => { root.save(); }
+                }
+            }
+        }
+    }
+}

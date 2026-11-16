@@ -1,0 +1,624 @@
+import { Theme } from "../themes/tokens.slint";
+
+export enum ButtonVariant {
+    primary,
+    secondary,
+    destructive,
+    ghost,
+}
+
+export component HxButton inherits Rectangle {
+    in property <string> label;
+    in property <image> icon;
+    in property <bool> has-icon: false;
+    in property <ButtonVariant> variant: ButtonVariant.secondary;
+    in property <bool> enabled: true;
+    in property <length> control-height: 32px;
+    in property <string> tooltip-text: "";
+    callback clicked();
+
+    height: root.control-height;
+    min-width: 72px;
+    border-radius: Theme.r-sm;
+    opacity: root.enabled ? 1.0 : 0.45;
+    border-width: root.variant == ButtonVariant.secondary ? 1px : 0px;
+    border-color: ta.has-hover && root.enabled ? Theme.accent : Theme.border;
+
+    background: {
+        if (root.variant == ButtonVariant.primary) {
+            ta.pressed && root.enabled ? Theme.accent : (ta.has-hover && root.enabled ? Theme.accent-hover : Theme.accent)
+        } else if (root.variant == ButtonVariant.destructive) {
+            ta.pressed && root.enabled ? Theme.danger-fg : (ta.has-hover && root.enabled ? Theme.danger-fg : Theme.danger-bg)
+        } else if (root.variant == ButtonVariant.ghost) {
+            ta.has-hover && root.enabled ? Theme.surface-hover : transparent
+        } else {
+            ta.pressed && root.enabled ? Theme.surface-elevated : (ta.has-hover && root.enabled ? Theme.surface-hover : Theme.surface)
+        }
+    }
+
+    animate background { duration: Theme.anim-fast; easing: ease-out; }
+    animate border-color { duration: Theme.anim-fast; easing: ease-out; }
+
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-description: root.tooltip-text;
+    accessible-enabled: root.enabled;
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => { root.clicked(); }
+    }
+
+    HorizontalLayout {
+        padding-left: Theme.s12;
+        padding-right: Theme.s12;
+        spacing: Theme.s8;
+        alignment: center;
+
+        if root.has-icon : Image {
+            source: root.icon;
+            width: 15px;
+            height: 15px;
+            colorize: {
+                if (root.variant == ButtonVariant.primary) {
+                    Theme.accent-fg
+                } else if (root.variant == ButtonVariant.destructive) {
+                    ta.has-hover && root.enabled ? Theme.danger-btn-fg : Theme.danger-fg
+                } else {
+                    Theme.text-primary
+                }
+            }
+            vertical-alignment: center;
+        }
+
+        if root.label != "" : Text {
+            text: root.label;
+            font-family: Theme.font-family;
+            font-size: Theme.type-body;
+            font-weight: 500;
+            vertical-alignment: center;
+            color: {
+                if (root.variant == ButtonVariant.primary) {
+                    Theme.accent-fg
+                } else if (root.variant == ButtonVariant.destructive) {
+                    ta.has-hover && root.enabled ? Theme.danger-btn-fg : Theme.danger-fg
+                } else {
+                    Theme.text-primary
+                }
+            }
+        }
+    }
+}
+
+export component HxBadge inherits Rectangle {
+    in property <string> text;
+    in property <int> tone: 0; // 0=Neutral, 1=Accent, 2=Success, 3=Warning, 4=Danger
+
+    height: 24px;
+    border-radius: 12px;
+    background: {
+        if (root.tone == 1) { Theme.accent-soft }
+        else if (root.tone == 2) { Theme.success-bg }
+        else if (root.tone == 3) { Theme.warning-bg }
+        else if (root.tone == 4) { Theme.danger-bg }
+        else { Theme.neutral-bg }
+    }
+
+    property <color> fg: {
+        if (root.tone == 1) { Theme.accent }
+        else if (root.tone == 2) { Theme.success-fg }
+        else if (root.tone == 3) { Theme.warning-fg }
+        else if (root.tone == 4) { Theme.danger-fg }
+        else { Theme.neutral-fg }
+    };
+
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        spacing: 6px;
+        alignment: center;
+
+        // Shape indicator paired with text (never conveys status by color alone)
+        Rectangle {
+            width: 6px;
+            height: 6px;
+            y: (parent.height - self.height) / 2;
+            border-radius: root.tone == 3 ? 1px : 3px;
+            background: root.fg;
+        }
+
+        Text {
+            text: root.text;
+            font-family: Theme.font-family;
+            font-size: Theme.type-caption;
+            font-weight: 500;
+            color: root.fg;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component HxMetricTile inherits Rectangle {
+    in property <string> label;
+    in property <string> value;
+    in property <string> subtitle: "";
+    in property <int> tone: 0;
+
+    border-radius: Theme.r-md;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: Theme.border;
+    min-height: 92px;
+
+    VerticalLayout {
+        padding: Theme.s16;
+        spacing: Theme.s4;
+        alignment: space-between;
+
+        Text {
+            text: root.label;
+            font-family: Theme.font-family;
+            font-size: Theme.type-caption;
+            font-weight: 500;
+            color: Theme.text-secondary;
+            overflow: elide;
+        }
+
+        Text {
+            text: root.value;
+            font-family: Theme.font-family;
+            font-size: Theme.type-display;
+            font-weight: 600;
+            color: {
+                if (root.tone == 2) { Theme.success-fg }
+                else if (root.tone == 3) { Theme.warning-fg }
+                else if (root.tone == 4) { Theme.danger-fg }
+                else { Theme.text-primary }
+            }
+            overflow: elide;
+        }
+
+        if root.subtitle != "" : Text {
+            text: root.subtitle;
+            font-family: Theme.font-family;
+            font-size: Theme.type-caption;
+            font-weight: 400;
+            color: Theme.text-secondary;
+            overflow: elide;
+        }
+    }
+}
+
+export component HxProgressBar inherits Rectangle {
+    in property <float> percent: 0.0;
+    in property <bool> indeterminate: false;
+
+    height: 6px;
+    border-radius: 3px;
+    background: Theme.border;
+    clip: true;
+
+    if !root.indeterminate : Rectangle {
+        x: 0px;
+        y: 0px;
+        height: parent.height;
+        width: parent.width * Math.clamp(root.percent / 100.0, 0.0, 1.0);
+        border-radius: 3px;
+        background: Theme.accent;
+        animate width { duration: Theme.anim-smooth; easing: ease-out; }
+    }
+
+    if root.indeterminate : Rectangle {
+        y: 0px;
+        height: parent.height;
+        width: parent.width * 0.35;
+        x: Theme.reduced-motion ? parent.width * 0.32 : (parent.width * 0.65) * (0.5 + 0.5 * Math.sin(animation-tick() / 1s * 180deg));
+        border-radius: 3px;
+        background: Theme.accent;
+    }
+}
+
+export component HxTextField inherits Rectangle {
+    in-out property <string> text;
+    in property <string> placeholder: "";
+    in property <string> label: "";
+    in property <bool> read-only: false;
+    callback edited(string);
+    callback accepted(string);
+
+    VerticalLayout {
+        spacing: Theme.s4;
+
+        if root.label != "" : Text {
+            text: root.label;
+            font-family: Theme.font-family;
+            font-size: Theme.type-caption;
+            font-weight: 500;
+            color: Theme.text-secondary;
+        }
+
+        box := Rectangle {
+            height: 34px;
+            border-radius: Theme.r-sm;
+            background: Theme.surface-elevated;
+            border-width: 1px;
+            border-color: ti.has-focus ? Theme.accent : Theme.border;
+            animate border-color { duration: Theme.anim-fast; }
+
+            if root.text == "" && root.placeholder != "" : Text {
+                x: Theme.s12;
+                width: parent.width - Theme.s24;
+                height: parent.height;
+                text: root.placeholder;
+                font-family: Theme.font-family;
+                font-size: Theme.type-body;
+                color: Theme.text-secondary;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+
+            ti := TextInput {
+                x: Theme.s12;
+                width: parent.width - Theme.s24;
+                height: parent.height;
+                text <=> root.text;
+                font-family: Theme.font-family;
+                font-size: Theme.type-body;
+                font-weight: 400;
+                color: Theme.text-primary;
+                selection-background-color: Theme.accent-soft;
+                selection-foreground-color: Theme.text-primary;
+                single-line: true;
+                read-only: root.read-only;
+                vertical-alignment: center;
+                accessible-role: text-input;
+                accessible-label: root.label != "" ? root.label : root.placeholder;
+                accessible-value: root.text;
+                edited => { root.edited(self.text); }
+                accepted => { root.accepted(self.text); }
+            }
+        }
+    }
+}
+
+export component HxToggle inherits Rectangle {
+    in-out property <bool> checked: false;
+    in property <string> label: "";
+    callback toggled(bool);
+
+    height: 28px;
+    accessible-role: switch;
+    accessible-label: root.label;
+    accessible-checked: root.checked;
+
+    HorizontalLayout {
+        spacing: Theme.s12;
+        alignment: start;
+
+        track := Rectangle {
+            width: 40px;
+            height: 22px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 11px;
+            background: root.checked ? Theme.accent : Theme.border;
+            animate background { duration: Theme.anim-fast; }
+
+            Rectangle {
+                width: 16px;
+                height: 16px;
+                y: 3px;
+                x: root.checked ? 21px : 3px;
+                border-radius: 8px;
+                background: #FFFFFF;
+                animate x { duration: Theme.anim-fast; easing: ease-out; }
+            }
+        }
+
+        if root.label != "" : Text {
+            text: root.label;
+            font-family: Theme.font-family;
+            font-size: Theme.type-body;
+            color: Theme.text-primary;
+            vertical-alignment: center;
+        }
+    }
+
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+        }
+    }
+}
+
+export component HxSegmentedSwitch inherits Rectangle {
+    in property <[string]> options;
+    in-out property <int> current-index: 0;
+    callback selected(int);
+
+    height: 32px;
+    border-radius: Theme.r-sm;
+    background: Theme.surface-elevated;
+    border-width: 1px;
+    border-color: Theme.border;
+
+    HorizontalLayout {
+        padding: 3px;
+        spacing: 2px;
+
+        for opt[idx] in root.options : Rectangle {
+            border-radius: 4px;
+            background: idx == root.current-index ? Theme.surface : transparent;
+            border-width: idx == root.current-index ? 1px : 0px;
+            border-color: Theme.border;
+            animate background { duration: Theme.anim-fast; }
+
+            accessible-role: tab;
+            accessible-label: opt;
+            accessible-item-selectable: true;
+            accessible-item-selected: idx == root.current-index;
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.current-index = idx;
+                    root.selected(idx);
+                }
+            }
+
+            HorizontalLayout {
+                padding-left: Theme.s12;
+                padding-right: Theme.s12;
+                Text {
+                    text: opt;
+                    font-family: Theme.font-family;
+                    font-size: Theme.type-caption;
+                    font-weight: idx == root.current-index ? 600 : 400;
+                    color: idx == root.current-index ? Theme.text-primary : Theme.text-secondary;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+    }
+}
+
+export component HxSectionHeader inherits HorizontalLayout {
+    in property <string> title;
+    in property <string> subtitle: "";
+    alignment: space-between;
+    spacing: Theme.s12;
+
+    VerticalLayout {
+        spacing: 2px;
+        Text {
+            text: root.title;
+            font-family: Theme.font-family;
+            font-size: Theme.type-section;
+            font-weight: 600;
+            color: Theme.text-primary;
+        }
+        if root.subtitle != "" : Text {
+            text: root.subtitle;
+            font-family: Theme.font-family;
+            font-size: Theme.type-caption;
+            color: Theme.text-secondary;
+        }
+    }
+    @children
+}
+
+export component HxEmptyState inherits Rectangle {
+    in property <string> title;
+    in property <string> description;
+
+    border-radius: Theme.r-md;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: Theme.border;
+    min-height: 120px;
+
+    VerticalLayout {
+        padding: Theme.s24;
+        spacing: Theme.s4;
+        alignment: center;
+
+        Text {
+            text: root.title;
+            font-family: Theme.font-family;
+            font-size: Theme.type-section;
+            font-weight: 500;
+            color: Theme.text-primary;
+            horizontal-alignment: center;
+        }
+        Text {
+            text: root.description;
+            font-family: Theme.font-family;
+            font-size: Theme.type-body;
+            color: Theme.text-secondary;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+        @children
+    }
+}
+
+export component HxErrorBanner inherits Rectangle {
+    in property <string> message;
+    in property <bool> is-warning: false;
+
+    border-radius: Theme.r-sm;
+    background: root.is-warning ? Theme.warning-bg : Theme.danger-bg;
+    border-width: 1px;
+    border-color: root.is-warning ? Theme.warning-fg : Theme.danger-fg;
+
+    HorizontalLayout {
+        padding: Theme.s12;
+        spacing: Theme.s12;
+        alignment: space-between;
+
+        Text {
+            text: root.message;
+            font-family: Theme.font-family;
+            font-size: Theme.type-body;
+            font-weight: 500;
+            color: root.is-warning ? Theme.warning-fg : Theme.danger-fg;
+            wrap: word-wrap;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+        @children
+    }
+}
+
+export component HxSettingRow inherits Rectangle {
+    in property <string> title;
+    in property <string> description;
+    min-height: 56px;
+
+    HorizontalLayout {
+        padding-top: Theme.s12;
+        padding-bottom: Theme.s12;
+        spacing: Theme.s16;
+        alignment: space-between;
+
+        VerticalLayout {
+            horizontal-stretch: 1;
+            spacing: 2px;
+            alignment: center;
+
+            Text {
+                text: root.title;
+                font-family: Theme.font-family;
+                font-size: Theme.type-body;
+                font-weight: 500;
+                color: Theme.text-primary;
+            }
+            Text {
+                text: root.description;
+                font-family: Theme.font-family;
+                font-size: Theme.type-caption;
+                color: Theme.text-secondary;
+                wrap: word-wrap;
+            }
+        }
+
+        HorizontalLayout {
+            alignment: end;
+            @children
+        }
+    }
+}
+
+export component HxLineChart inherits Rectangle {
+    in property <string> title;
+    in property <string> current-label: "";
+    in property <string> y-top-label: "100%";
+    in property <string> y-bottom-label: "0%";
+    in property <string> line-commands: "";
+    in property <string> area-commands: "";
+    in property <bool> has-data: false;
+    in property <color> line-color: Theme.accent;
+
+    border-radius: Theme.r-md;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: Theme.border;
+    min-height: 186px;
+
+    VerticalLayout {
+        padding: Theme.s16;
+        spacing: Theme.s12;
+
+        HorizontalLayout {
+            alignment: space-between;
+            Text {
+                text: root.title;
+                font-family: Theme.font-family;
+                font-size: Theme.type-section;
+                font-weight: 600;
+                color: Theme.text-primary;
+            }
+            Text {
+                text: root.current-label;
+                font-family: Theme.font-family;
+                font-size: Theme.type-body;
+                font-weight: 500;
+                color: root.line-color;
+            }
+        }
+
+        plot-area := Rectangle {
+            vertical-stretch: 1;
+            min-height: 112px;
+            border-radius: Theme.r-sm;
+            background: Theme.bg;
+            border-width: 1px;
+            border-color: Theme.border;
+            clip: true;
+
+            // Subtle horizontal reference rule
+            Rectangle {
+                x: 0px;
+                y: parent.height * 0.5;
+                width: parent.width;
+                height: 1px;
+                background: Theme.border;
+                opacity: 0.5;
+            }
+
+            if root.has-data && root.area-commands != "" : Path {
+                width: parent.width;
+                height: parent.height;
+                viewbox-x: 0;
+                viewbox-y: 0;
+                viewbox-width: 480;
+                viewbox-height: 120;
+                commands: root.area-commands;
+                fill: root.line-color;
+                opacity: 0.14;
+            }
+
+            if root.has-data && root.line-commands != "" : Path {
+                width: parent.width;
+                height: parent.height;
+                viewbox-x: 0;
+                viewbox-y: 0;
+                viewbox-width: 480;
+                viewbox-height: 120;
+                commands: root.line-commands;
+                stroke: root.line-color;
+                stroke-width: 2px;
+                fill: transparent;
+            }
+
+            if !root.has-data : Text {
+                text: "Collecting telemetry samples…";
+                font-family: Theme.font-family;
+                font-size: Theme.type-caption;
+                color: Theme.text-secondary;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            Text {
+                x: Theme.s8;
+                y: Theme.s4;
+                text: root.y-top-label;
+                font-family: Theme.font-family;
+                font-size: Theme.type-caption;
+                color: Theme.text-secondary;
+            }
+            Text {
+                x: Theme.s8;
+                y: parent.height - self.height - Theme.s4;
+                text: root.y-bottom-label;
+                font-family: Theme.font-family;
+                font-size: Theme.type-caption;
+                color: Theme.text-secondary;
+            }
+        }
+    }
+}

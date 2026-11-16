@@ -1,0 +1,63 @@
+import "../../assets/fonts/Poppins-Regular.ttf";
+import "../../assets/fonts/Poppins-Medium.ttf";
+import "../../assets/fonts/Poppins-SemiBold.ttf";
+import "../../assets/fonts/Poppins-Bold.ttf";
+
+export global Theme {
+    in-out property <bool> dark-mode: true;
+    in-out property <bool> reduced-motion: false;
+
+    // Typography — Poppins only throughout the entire UI
+    out property <string> font-family: "Poppins";
+    out property <length> type-display: 24px;
+    out property <length> type-title: 18px;
+    out property <length> type-section: 14px;
+    out property <length> type-body: 13px;
+    out property <length> type-caption: 11px;
+
+    // Spacing system (4px base, 8px rhythm)
+    out property <length> s4: 4px;
+    out property <length> s8: 8px;
+    out property <length> s12: 12px;
+    out property <length> s16: 16px;
+    out property <length> s24: 24px;
+    out property <length> s32: 32px;
+
+    // Radii
+    out property <length> r-sm: 6px;
+    out property <length> r-md: 10px;
+    out property <length> r-lg: 14px;
+
+    // Motion
+    out property <duration> anim-fast: reduced-motion ? 0ms : 120ms;
+    out property <duration> anim-smooth: reduced-motion ? 0ms : 180ms;
+
+    // Palette — Dark & Light specification
+    out property <color> bg: dark-mode ? #111214 : #F5F5F3;
+    out property <color> surface: dark-mode ? #1B1D20 : #FFFFFF;
+    out property <color> surface-elevated: dark-mode ? #24272B : #FFFFFF;
+    out property <color> surface-hover: dark-mode ? #2A2D32 : #EFEFED;
+    out property <color> border: dark-mode ? #32353A : #E5E5E1;
+
+    out property <color> text-primary: dark-mode ? #F4F4F2 : #17181A;
+    out property <color> text-secondary: dark-mode ? #A1A5AB : #74777D;
+
+    out property <color> accent: dark-mode ? #7C9CF5 : #526FC5;
+    out property <color> accent-hover: dark-mode ? #8FA9F7 : #445FB3;
+    out property <color> accent-fg: dark-mode ? #111214 : #FFFFFF;
+    out property <color> accent-soft: dark-mode ? #1D2538 : #EEF2FF;
+
+    // Semantic colors (paired with text/shapes, never color alone)
+    out property <color> success-fg: dark-mode ? #4ADE80 : #15803D;
+    out property <color> success-bg: dark-mode ? #1A2E23 : #ECFDF3;
+
+    out property <color> warning-fg: dark-mode ? #FBBF24 : #B45309;
+    out property <color> warning-bg: dark-mode ? #2E2617 : #FFFBEB;
+
+    out property <color> danger-fg: dark-mode ? #F87171 : #B91C1C;
+    out property <color> danger-bg: dark-mode ? #301C1E : #FEF2F2;
+    out property <color> danger-btn-fg: #FFFFFF;
+
+    out property <color> neutral-fg: dark-mode ? #A1A5AB : #5C5F66;
+    out property <color> neutral-bg: dark-mode ? #24272B : #EFEFED;
+}

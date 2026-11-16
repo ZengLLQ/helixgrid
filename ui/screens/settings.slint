@@ -1,0 +1,300 @@
+import { Theme } from "../themes/tokens.slint";
+import { RegisteredExeRowData } from "../types.slint";
+import {
+    HxButton, ButtonVariant, HxSectionHeader, HxSettingRow, HxSegmentedSwitch,
+    HxTextField, HxToggle, HxBadge
+} from "../components/primitives.slint";
+import { ScrollView } from "std-widgets.slint";
+
+export component SettingsScreen inherits ScrollView {
+    // Appearance
+    in-out property <int> theme-idx: 0; // 0=Dark, 1=Light
+    in-out property <int> reduced-motion-idx: 0; // 0=System, 1=On, 2=Off
+
+    // General & Scheduler
+    in-out property <int> scheduling-policy-idx: 0; // 0=PriorityResourceAware, 1=FifoResourceAware
+    in-out property <string> max-queue-depth: "500";
+
+    // Resources
+    in-out property <string> max-workers: "4";
+    in-out property <string> max-concurrent-workloads: "4";
+    in-out property <string> cpu-ceiling-pct: "85";
+    in-out property <string> mem-ceiling-pct: "80";
+    in-out property <string> reserved-mem-mb: "2048";
+
+    // Execution
+    in-out property <string> default-timeout-sec: "120";
+    in-out property <bool> auto-recover: true;
+
+    // Workers & Storage & Logging
+    in-out property <string> heartbeat-interval-ms: "1500";
+    in-out property <string> heartbeat-timeout-ms: "8000";
+    in-out property <string> snapshot-retention: "10000";
+    in-out property <string> event-retention: "20000";
+    in-out property <string> max-log-mb: "10";
+    in property <string> data-dir-path;
+
+    // Security allowlist
+    in property <[RegisteredExeRowData]> registered-executables;
+    in property <string> settings-error: "";
+
+    callback theme-changed(int);
+    callback reduced-motion-changed(int);
+    callback save-settings();
+    callback backup-database();
+    callback open-register-exe();
+    callback remove-registered-exe(string);
+
+    VerticalLayout {
+        padding: Theme.s24;
+        spacing: Theme.s24;
+
+        HxSectionHeader {
+            title: "Settings";
+            subtitle: "Persist configuration under LocalAppData and manage registered executables";
+            HxButton {
+                label: "Save Changes";
+                variant: ButtonVariant.primary;
+                clicked => { root.save-settings(); }
+            }
+        }
+
+        if root.settings-error != "" : Text {
+            text: root.settings-error;
+            font-family: Theme.font-family;
+            font-size: Theme.type-body;
+            color: Theme.danger-fg;
+            wrap: word-wrap;
+        }
+
+        // 1. General & Appearance
+        Rectangle {
+            border-radius: Theme.r-md;
+            background: Theme.surface;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            VerticalLayout {
+                padding: Theme.s16;
+                spacing: Theme.s4;
+                Text { text: "General & Appearance"; font-family: Theme.font-family; font-size: Theme.type-section; font-weight: 600; color: Theme.text-primary; }
+
+                HxSettingRow {
+                    title: "Appearance";
+                    description: "Switch between HelixGrid dark and light color tokens";
+                    HxSegmentedSwitch {
+                        options: ["Dark", "Light"];
+                        current-index <=> root.theme-idx;
+                        selected(idx) => { root.theme-changed(idx); }
+                    }
+                }
+                Rectangle { height: 1px; background: Theme.border; }
+                HxSettingRow {
+                    title: "Motion Preference";
+                    description: "Respect Windows animation setting or force reduced motion";
+                    HxSegmentedSwitch {
+                        options: ["System", "Reduced", "Full"];
+                        current-index <=> root.reduced-motion-idx;
+                        selected(idx) => { root.reduced-motion-changed(idx); }
+                    }
+                }
+                Rectangle { height: 1px; background: Theme.border; }
+                HxSettingRow {
+                    title: "Scheduling Policy";
+                    description: "Deterministic workload ordering across available worker capacity";
+                    HxSegmentedSwitch {
+                        options: ["Priority + Resource", "FIFO + Resource"];
+                        current-index <=> root.scheduling-policy-idx;
+                    }
+                }
+                Rectangle { height: 1px; background: Theme.border; }
+                HxSettingRow {
+                    title: "Maximum Queue Depth";
+                    description: "Bounded backpressure limit for queued workloads";
+                    HxTextField { width: 140px; text <=> root.max-queue-depth; }
+                }
+            }
+        }
+
+        // 2. Resources & Execution
+        Rectangle {
+            border-radius: Theme.r-md;
+            background: Theme.surface;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            VerticalLayout {
+                padding: Theme.s16;
+                spacing: Theme.s4;
+                Text { text: "Resources & Execution"; font-family: Theme.font-family; font-size: Theme.type-section; font-weight: 600; color: Theme.text-primary; }
+
+                HxSettingRow {
+                    title: "Max Worker Processes";
+                    description: "Upper limit on concurrent isolated worker OS processes (1-64)";
+                    HxTextField { width: 120px; text <=> root.max-workers; }
+                }
+                Rectangle { height: 1px; background: Theme.border; }
+                HxSettingRow {
+                    title: "Max Concurrent Workloads";
+                    description: "Global concurrency limit across the local worker pool";
+                    HxTextField { width: 120px; text <=> root.max-concurrent-workloads; }
+                }
+                Rectangle { height: 1px; background: Theme.border; }
+                HxSettingRow {
+                    title: "CPU Utilization Ceiling (%)";
+                    description: "Pause dispatching new workloads above this host CPU threshold";
+                    HxTextField { width: 120px; text <=> root.cpu-ceiling-pct; }
+                }
+                Rectangle { height: 1px; background: Theme.border; }
+                HxSettingRow {
+                    title: "Memory Allocation Ceiling (%) / System Reserve (MB)";
+                    description: "Preserve host memory headroom before admitting memory-bound workloads";
+                    HorizontalLayout {
+                        spacing: Theme.s8;
+                        HxTextField { width: 100px; text <=> root.mem-ceiling-pct; }
+                        HxTextField { width: 120px; text <=> root.reserved-mem-mb; }
+                    }
+                }
+                Rectangle { height: 1px; background: Theme.border; }
+                HxSettingRow {
+                    title: "Default Timeout (seconds)";
+                    description: "Execution timeout applied when submitting workloads";
+                    HxTextField { width: 120px; text <=> root.default-timeout-sec; }
+                }
+                Rectangle { height: 1px; background: Theme.border; }
+                HxSettingRow {
+                    title: "Auto-Recover Idempotent Workloads";
+                    description: "Automatically re-queue safe idempotent tasks interrupted by crash/restart";
+                    HxToggle { checked <=> root.auto-recover; label: root.auto-recover ? "Enabled" : "Manual"; }
+                }
+            }
+        }
+
+        // 3. Workers, Storage & Logging
+        Rectangle {
+            border-radius: Theme.r-md;
+            background: Theme.surface;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            VerticalLayout {
+                padding: Theme.s16;
+                spacing: Theme.s4;
+                Text { text: "Workers, Storage & Logging"; font-family: Theme.font-family; font-size: Theme.type-section; font-weight: 600; color: Theme.text-primary; }
+
+                HxSettingRow {
+                    title: "Worker Heartbeat Interval / Timeout (ms)";
+                    description: "Crash detection timing for local worker IPC channels";
+                    HorizontalLayout {
+                        spacing: Theme.s8;
+                        HxTextField { width: 110px; text <=> root.heartbeat-interval-ms; }
+                        HxTextField { width: 110px; text <=> root.heartbeat-timeout-ms; }
+                    }
+                }
+                Rectangle { height: 1px; background: Theme.border; }
+                HxSettingRow {
+                    title: "SQLite Retention Caps (Snapshots / Events)";
+                    description: "Bounded database retention to prevent unbounded growth";
+                    HorizontalLayout {
+                        spacing: Theme.s8;
+                        HxTextField { width: 110px; text <=> root.snapshot-retention; }
+                        HxTextField { width: 110px; text <=> root.event-retention; }
+                    }
+                }
+                Rectangle { height: 1px; background: Theme.border; }
+                HxSettingRow {
+                    title: "Max Log File Size (MiB)";
+                    description: "Bounded rotating JSON log files under " + root.data-dir-path;
+                    HxTextField { width: 110px; text <=> root.max-log-mb; }
+                }
+                Rectangle { height: 1px; background: Theme.border; }
+                HxSettingRow {
+                    title: "Database Backup";
+                    description: "Create a consistent online SQLite backup using SQLite's backup API";
+                    HxButton {
+                        label: "Backup Database…";
+                        icon: @image-url("../../assets/icons/download.svg");
+                        has-icon: true;
+                        clicked => { root.backup-database(); }
+                    }
+                }
+            }
+        }
+
+        // 4. Security Allowlist
+        Rectangle {
+            border-radius: Theme.r-md;
+            background: Theme.surface;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            VerticalLayout {
+                padding: Theme.s16;
+                spacing: Theme.s12;
+
+                HxSectionHeader {
+                    title: "Security & Registered Executables";
+                    subtitle: "Only explicitly registered non-shell binaries may run; Job Objects enforce process limits, not full OS sandboxing";
+                    HxButton {
+                        label: "Register Executable…";
+                        icon: @image-url("../../assets/icons/plus.svg");
+                        has-icon: true;
+                        clicked => { root.open-register-exe(); }
+                    }
+                }
+
+                if root.registered-executables.length == 0 : Text {
+                    text: "No external executables registered. Built-in Rust compute workloads require no external binaries.";
+                    font-family: Theme.font-family;
+                    font-size: Theme.type-caption;
+                    color: Theme.text-secondary;
+                }
+
+                for exe in root.registered-executables : Rectangle {
+                    border-radius: Theme.r-sm;
+                    background: Theme.bg;
+                    border-width: 1px;
+                    border-color: Theme.border;
+
+                    HorizontalLayout {
+                        padding: Theme.s12;
+                        spacing: Theme.s12;
+                        alignment: space-between;
+
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 2px;
+                            Text {
+                                text: exe.display-name + " (" + exe.id + ")";
+                                font-family: Theme.font-family;
+                                font-size: Theme.type-body;
+                                font-weight: 500;
+                                color: Theme.text-primary;
+                            }
+                            Text {
+                                text: exe.executable-path + " · cwd: " + exe.working-dir;
+                                font-family: Theme.font-family;
+                                font-size: Theme.type-caption;
+                                color: Theme.text-secondary;
+                                wrap: word-wrap;
+                            }
+                        }
+                        HorizontalLayout {
+                            spacing: Theme.s8;
+                            HxBadge {
+                                text: exe.retry-safety;
+                                tone: 0;
+                            }
+                            HxButton {
+                                label: "Remove";
+                                variant: ButtonVariant.destructive;
+                                control-height: 28px;
+                                clicked => { root.remove-registered-exe(exe.id); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

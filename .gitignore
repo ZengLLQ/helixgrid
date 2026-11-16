@@ -1,0 +1,12 @@
+/target
+**/*.rs.bk
+*.pdb
+*.log
+*.db
+*.db-wal
+*.db-shm
+.DS_Store
+Thumbs.db
+packaging/out/
+*.msi
+*.wixpdb

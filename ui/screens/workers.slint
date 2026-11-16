@@ -1,0 +1,185 @@
+import { Theme } from "../themes/tokens.slint";
+import { WorkerRowData } from "../types.slint";
+import {
+    HxBadge, HxButton, ButtonVariant, HxSectionHeader, HxEmptyState
+} from "../components/primitives.slint";
+import { ScrollView } from "std-widgets.slint";
+
+export component WorkersScreen inherits HorizontalLayout {
+    in property <[WorkerRowData]> workers;
+    in-out property <string> selected-worker-id: "";
+    in property <WorkerRowData> selected-worker;
+    in property <bool> has-selection: false;
+
+    callback select-worker(string);
+    callback close-inspector();
+    callback spawn-worker();
+    callback shutdown-worker(string);
+    callback restart-worker(string);
+    callback open-diagnostics();
+
+    ScrollView {
+        horizontal-stretch: 1;
+
+        VerticalLayout {
+            padding: Theme.s24;
+            spacing: Theme.s16;
+
+            HxSectionHeader {
+                title: "Isolated Worker Processes";
+                subtitle: "Independent Windows processes managed with Job Objects and authenticated Named Pipes";
+                HxButton {
+                    label: "Spawn Worker";
+                    icon: @image-url("../../assets/icons/plus.svg");
+                    has-icon: true;
+                    variant: ButtonVariant.primary;
+                    clicked => { root.spawn-worker(); }
+                }
+            }
+
+            if root.workers.length == 0 : HxEmptyState {
+                title: "No worker processes registered";
+                description: "Spawn a worker process to execute local compute workloads.";
+            }
+
+            if root.workers.length > 0 : Rectangle {
+                border-radius: Theme.r-md;
+                background: Theme.surface;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                VerticalLayout {
+                    // Header row
+                    Rectangle {
+                        height: 36px;
+                        border-width: 0px;
+                        HorizontalLayout {
+                            padding-left: Theme.s16;
+                            padding-right: Theme.s16;
+                            spacing: Theme.s12;
+                            Text { horizontal-stretch: 1.3; text: "Worker"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; vertical-alignment: center; }
+                            Text { width: 72px; text: "PID"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; vertical-alignment: center; }
+                            Text { width: 112px; text: "Status"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; vertical-alignment: center; }
+                            Text { width: 88px; text: "CPU"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; vertical-alignment: center; }
+                            Text { width: 96px; text: "Memory"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; vertical-alignment: center; }
+                            Text { horizontal-stretch: 1.5; text: "Current Workload"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; vertical-alignment: center; }
+                            Text { width: 80px; text: "Uptime"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; vertical-alignment: center; }
+                            Text { width: 96px; text: "Heartbeat"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; vertical-alignment: center; }
+                        }
+                    }
+
+                    Rectangle { height: 1px; background: Theme.border; }
+
+                    for w in root.workers : Rectangle {
+                        height: 48px;
+                        background: w.id == root.selected-worker-id ? Theme.accent-soft : (wta.has-hover ? Theme.surface-hover : transparent);
+                        animate background { duration: Theme.anim-fast; }
+
+                        wta := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.select-worker(w.id); }
+                        }
+
+                        HorizontalLayout {
+                            padding-left: Theme.s16;
+                            padding-right: Theme.s16;
+                            spacing: Theme.s12;
+
+                            Text { horizontal-stretch: 1.3; text: w.name; font-family: Theme.font-family; font-size: Theme.type-body; font-weight: 500; color: Theme.text-primary; vertical-alignment: center; overflow: elide; }
+                            Text { width: 72px; text: w.pid-text; font-family: Theme.font-family; font-size: Theme.type-body; color: Theme.text-secondary; vertical-alignment: center; }
+                            HorizontalLayout {
+                                width: 112px;
+                                padding-top: 12px;
+                                HxBadge { text: w.status-text; tone: w.status-tone; }
+                            }
+                            Text { width: 88px; text: w.cpu-text; font-family: Theme.font-family; font-size: Theme.type-body; color: Theme.text-primary; vertical-alignment: center; }
+                            Text { width: 96px; text: w.memory-text; font-family: Theme.font-family; font-size: Theme.type-body; color: Theme.text-primary; vertical-alignment: center; }
+                            Text { horizontal-stretch: 1.5; text: w.current-workload; font-family: Theme.font-family; font-size: Theme.type-body; color: Theme.text-secondary; vertical-alignment: center; overflow: elide; }
+                            Text { width: 80px; text: w.uptime-text; font-family: Theme.font-family; font-size: Theme.type-caption; color: Theme.text-secondary; vertical-alignment: center; }
+                            Text { width: 96px; text: w.heartbeat-text; font-family: Theme.font-family; font-size: Theme.type-caption; color: Theme.text-secondary; vertical-alignment: center; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 300px Worker Inspector Panel
+    if root.has-selection : Rectangle {
+        width: 300px;
+        background: Theme.surface;
+
+        Rectangle {
+            x: 0px;
+            y: 0px;
+            width: 1px;
+            height: parent.height;
+            background: Theme.border;
+        }
+
+        ScrollView {
+            VerticalLayout {
+                padding: Theme.s16;
+                spacing: Theme.s16;
+
+                HorizontalLayout {
+                    alignment: space-between;
+                    Text {
+                        text: root.selected-worker.name;
+                        font-family: Theme.font-family;
+                        font-size: Theme.type-title;
+                        font-weight: 600;
+                        color: Theme.text-primary;
+                    }
+                    HxButton {
+                        label: "Close";
+                        variant: ButtonVariant.ghost;
+                        control-height: 28px;
+                        clicked => { root.close-inspector(); }
+                    }
+                }
+
+                HxBadge {
+                    text: root.selected-worker.status-text;
+                    tone: root.selected-worker.status-tone;
+                }
+
+                VerticalLayout {
+                    spacing: Theme.s8;
+                    Text { text: "Process & Capacity"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; }
+                    Text { text: "ID: " + root.selected-worker.id; font-family: Theme.font-family; font-size: Theme.type-caption; color: Theme.text-secondary; wrap: word-wrap; }
+                    Text { text: "PID: " + root.selected-worker.pid-text; font-family: Theme.font-family; font-size: Theme.type-body; color: Theme.text-primary; }
+                    Text { text: "Reservations: " + root.selected-worker.reserved-text; font-family: Theme.font-family; font-size: Theme.type-body; color: Theme.text-primary; wrap: word-wrap; }
+                    Text { text: "CPU / RAM: " + root.selected-worker.cpu-text + " · " + root.selected-worker.memory-text; font-family: Theme.font-family; font-size: Theme.type-body; color: Theme.text-primary; }
+                    Text { text: "Completed: " + root.selected-worker.completed-count + "   Failed: " + root.selected-worker.failed-count; font-family: Theme.font-family; font-size: Theme.type-body; color: Theme.text-primary; }
+                }
+
+                VerticalLayout {
+                    spacing: Theme.s4;
+                    Text { text: "Isolation & IPC"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; }
+                    Text { text: root.selected-worker.isolation-note; font-family: Theme.font-family; font-size: Theme.type-caption; color: Theme.text-secondary; wrap: word-wrap; }
+                }
+
+                VerticalLayout {
+                    spacing: Theme.s8;
+                    HxButton {
+                        label: "Restart Worker";
+                        variant: ButtonVariant.secondary;
+                        clicked => { root.restart-worker(root.selected-worker.id); }
+                    }
+                    HxButton {
+                        label: "Graceful Shutdown";
+                        variant: ButtonVariant.destructive;
+                        enabled: root.selected-worker.is-alive;
+                        clicked => { root.shutdown-worker(root.selected-worker.id); }
+                    }
+                    HxButton {
+                        label: "View Diagnostics";
+                        variant: ButtonVariant.ghost;
+                        clicked => { root.open-diagnostics(); }
+                    }
+                }
+            }
+        }
+    }
+}

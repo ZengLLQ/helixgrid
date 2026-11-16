@@ -1,0 +1,118 @@
+import { Theme } from "../themes/tokens.slint";
+import { EventRowData } from "../types.slint";
+import {
+    HxBadge, HxSectionHeader, HxSegmentedSwitch, HxTextField, HxEmptyState
+} from "../components/primitives.slint";
+import { ScrollView } from "std-widgets.slint";
+
+export component ActivityScreen inherits ScrollView {
+    in property <[EventRowData]> events;
+    in-out property <int> severity-filter-idx: 0; // 0=All, 1=Info, 2=Warning, 3=Error, 4=Critical
+    in-out property <int> window-filter-idx: 0;   // 0=All, 1=Last 5m, 2=Last 1h
+    in-out property <string> search-query: "";
+
+    callback filter-changed();
+
+    VerticalLayout {
+        padding: Theme.s24;
+        spacing: Theme.s16;
+
+        HxSectionHeader {
+            title: "System Activity";
+            subtitle: "Chronological scheduler, worker, recovery, and security events";
+        }
+
+        HorizontalLayout {
+            spacing: Theme.s12;
+            HxSegmentedSwitch {
+                options: ["All", "Info", "Warning", "Error", "Critical"];
+                current-index <=> root.severity-filter-idx;
+                selected => { root.filter-changed(); }
+            }
+            HxSegmentedSwitch {
+                options: ["All Time", "5 min", "1 hr"];
+                current-index <=> root.window-filter-idx;
+                selected => { root.filter-changed(); }
+            }
+            HxTextField {
+                horizontal-stretch: 1;
+                text <=> root.search-query;
+                placeholder: "Filter by event type, workload ID, worker ID, or text…";
+                edited => { root.filter-changed(); }
+            }
+        }
+
+        if root.events.length == 0 : HxEmptyState {
+            title: "No events match filters";
+            description: "Adjust severity, time range, or search text to inspect historical system events.";
+        }
+
+        if root.events.length > 0 : Rectangle {
+            border-radius: Theme.r-md;
+            background: Theme.surface;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            VerticalLayout {
+                padding: Theme.s8;
+                spacing: Theme.s4;
+                for ev in root.events : Rectangle {
+                    min-height: 44px;
+                    border-radius: Theme.r-sm;
+                    background: evta.has-hover ? Theme.surface-hover : transparent;
+                    evta := TouchArea {}
+
+                    HorizontalLayout {
+                        padding-left: Theme.s12;
+                        padding-right: Theme.s12;
+                        padding-top: Theme.s8;
+                        padding-bottom: Theme.s8;
+                        spacing: Theme.s12;
+
+                        Text {
+                            width: 100px;
+                            text: ev.time-text;
+                            font-family: Theme.font-family;
+                            font-size: Theme.type-caption;
+                            color: Theme.text-secondary;
+                            vertical-alignment: center;
+                        }
+                        Rectangle {
+                            width: 90px;
+                            height: 24px;
+                            y: (parent.height - 24px) / 2;
+                            HxBadge { text: ev.severity-text; tone: ev.severity-tone; }
+                        }
+                        Text {
+                            width: 150px;
+                            text: ev.kind-text;
+                            font-family: Theme.font-family;
+                            font-size: Theme.type-caption;
+                            font-weight: 500;
+                            color: Theme.text-secondary;
+                            vertical-alignment: center;
+                            overflow: elide;
+                        }
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 2px;
+                            Text {
+                                text: ev.message;
+                                font-family: Theme.font-family;
+                                font-size: Theme.type-body;
+                                color: Theme.text-primary;
+                                wrap: word-wrap;
+                            }
+                            if ev.context-text != "" : Text {
+                                text: ev.context-text;
+                                font-family: Theme.font-family;
+                                font-size: Theme.type-caption;
+                                color: Theme.text-secondary;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

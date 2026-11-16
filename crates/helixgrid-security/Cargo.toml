@@ -1,0 +1,16 @@
+[package]
+name = "helixgrid-security"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+helixgrid-config.workspace = true
+helixgrid-domain.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

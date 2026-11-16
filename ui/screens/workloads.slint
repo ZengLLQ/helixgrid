@@ -1,0 +1,271 @@
+import { Theme } from "../themes/tokens.slint";
+import { WorkloadRowData } from "../types.slint";
+import {
+    HxBadge, HxButton, ButtonVariant, HxProgressBar, HxSectionHeader,
+    HxEmptyState, HxSegmentedSwitch, HxTextField, HxErrorBanner
+} from "../components/primitives.slint";
+import { ScrollView } from "std-widgets.slint";
+
+export component WorkloadsScreen inherits HorizontalLayout {
+    in property <[WorkloadRowData]> workloads;
+    in-out property <int> status-filter-idx: 0; // 0=All, 1=Active, 2=Completed, 3=Attention
+    in-out property <string> search-query: "";
+    in-out property <string> selected-workload-id: "";
+    in property <WorkloadRowData> selected-workload;
+    in property <bool> has-selection: false;
+
+    callback filter-changed();
+    callback select-workload(string);
+    callback close-inspector();
+    callback open-submit-dialog();
+    callback cancel-workload(string);
+    callback safe-retry-workload(string);
+
+    ScrollView {
+        horizontal-stretch: 1;
+
+        VerticalLayout {
+            padding: Theme.s24;
+            spacing: Theme.s16;
+
+            HxSectionHeader {
+                title: "Workloads";
+                subtitle: "Submit, monitor, cancel, safely retry, and inspect execution outputs";
+                HxButton {
+                    label: "New Workload";
+                    icon: @image-url("../../assets/icons/plus.svg");
+                    has-icon: true;
+                    variant: ButtonVariant.primary;
+                    clicked => { root.open-submit-dialog(); }
+                }
+            }
+
+            HorizontalLayout {
+                spacing: Theme.s12;
+                HxSegmentedSwitch {
+                    options: ["All", "Active", "Completed", "Attention"];
+                    current-index <=> root.status-filter-idx;
+                    selected => { root.filter-changed(); }
+                }
+                HxTextField {
+                    horizontal-stretch: 1;
+                    text <=> root.search-query;
+                    placeholder: "Filter by name, type, or ID…";
+                    edited => { root.filter-changed(); }
+                }
+            }
+
+            if root.workloads.length == 0 : HxEmptyState {
+                title: "No workloads match the current filter";
+                description: "Create a CPU benchmark, batch transform, numerical solve, or registered executable task.";
+            }
+
+            if root.workloads.length > 0 : Rectangle {
+                border-radius: Theme.r-md;
+                background: Theme.surface;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                VerticalLayout {
+                    Rectangle {
+                        height: 36px;
+                        HorizontalLayout {
+                            padding-left: Theme.s16;
+                            padding-right: Theme.s16;
+                            spacing: Theme.s12;
+                            Text { horizontal-stretch: 2; text: "Name"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; vertical-alignment: center; }
+                            Text { horizontal-stretch: 1.2; text: "Type"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; vertical-alignment: center; }
+                            Text { width: 112px; text: "Status"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; vertical-alignment: center; }
+                            Text { width: 76px; text: "Priority"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; vertical-alignment: center; }
+                            Text { width: 92px; text: "Worker"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; vertical-alignment: center; }
+                            Text { width: 92px; text: "Submitted"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; vertical-alignment: center; }
+                            Text { width: 84px; text: "Duration"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; vertical-alignment: center; }
+                        }
+                    }
+
+                    Rectangle { height: 1px; background: Theme.border; }
+
+                    for wl in root.workloads : Rectangle {
+                        height: 52px;
+                        background: wl.id == root.selected-workload-id ? Theme.accent-soft : (wlta.has-hover ? Theme.surface-hover : transparent);
+                        animate background { duration: Theme.anim-fast; }
+
+                        wlta := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.select-workload(wl.id); }
+                        }
+
+                        HorizontalLayout {
+                            padding-left: Theme.s16;
+                            padding-right: Theme.s16;
+                            spacing: Theme.s12;
+
+                            VerticalLayout {
+                                horizontal-stretch: 2;
+                                alignment: center;
+                                spacing: 2px;
+                                Text { text: wl.name; font-family: Theme.font-family; font-size: Theme.type-body; font-weight: 500; color: Theme.text-primary; overflow: elide; }
+                                Text { text: wl.short-id + " · " + wl.progress-text; font-family: Theme.font-family; font-size: Theme.type-caption; color: Theme.text-secondary; overflow: elide; }
+                            }
+                            Text { horizontal-stretch: 1.2; text: wl.type-text; font-family: Theme.font-family; font-size: Theme.type-body; color: Theme.text-secondary; vertical-alignment: center; overflow: elide; }
+                            HorizontalLayout {
+                                width: 112px;
+                                padding-top: 14px;
+                                HxBadge { text: wl.status-text; tone: wl.status-tone; }
+                            }
+                            Text { width: 76px; text: wl.priority-text; font-family: Theme.font-family; font-size: Theme.type-body; color: Theme.text-primary; vertical-alignment: center; }
+                            Text { width: 92px; text: wl.worker-text; font-family: Theme.font-family; font-size: Theme.type-body; color: Theme.text-secondary; vertical-alignment: center; overflow: elide; }
+                            Text { width: 92px; text: wl.submitted-text; font-family: Theme.font-family; font-size: Theme.type-caption; color: Theme.text-secondary; vertical-alignment: center; }
+                            Text { width: 84px; text: wl.duration-text; font-family: Theme.font-family; font-size: Theme.type-body; color: Theme.text-primary; vertical-alignment: center; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Workload Detail Inspector (340px)
+    if root.has-selection : Rectangle {
+        width: 340px;
+        background: Theme.surface;
+
+        Rectangle {
+            x: 0px;
+            y: 0px;
+            width: 1px;
+            height: parent.height;
+            background: Theme.border;
+        }
+
+        ScrollView {
+            VerticalLayout {
+                padding: Theme.s16;
+                spacing: Theme.s16;
+
+                HorizontalLayout {
+                    alignment: space-between;
+                    Text {
+                        horizontal-stretch: 1;
+                        text: root.selected-workload.name;
+                        font-family: Theme.font-family;
+                        font-size: Theme.type-title;
+                        font-weight: 600;
+                        color: Theme.text-primary;
+                        wrap: word-wrap;
+                    }
+                    HxButton {
+                        label: "Close";
+                        variant: ButtonVariant.ghost;
+                        control-height: 28px;
+                        clicked => { root.close-inspector(); }
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: Theme.s8;
+                    HxBadge {
+                        text: root.selected-workload.status-text;
+                        tone: root.selected-workload.status-tone;
+                    }
+                    Text {
+                        text: root.selected-workload.priority-text + " · " + root.selected-workload.duration-text;
+                        font-family: Theme.font-family;
+                        font-size: Theme.type-caption;
+                        color: Theme.text-secondary;
+                        vertical-alignment: center;
+                    }
+                }
+
+                HxProgressBar {
+                    percent: root.selected-workload.progress-pct;
+                    indeterminate: root.selected-workload.progress-indeterminate;
+                }
+
+                if root.selected-workload.can-cancel || root.selected-workload.can-retry : HorizontalLayout {
+                    spacing: Theme.s8;
+                    if root.selected-workload.can-cancel : HxButton {
+                        label: "Cancel Workload";
+                        variant: ButtonVariant.destructive;
+                        clicked => { root.cancel-workload(root.selected-workload.id); }
+                    }
+                    if root.selected-workload.can-retry : HxButton {
+                        label: "Safe Retry";
+                        variant: ButtonVariant.primary;
+                        clicked => { root.safe-retry-workload(root.selected-workload.id); }
+                    }
+                }
+
+                if root.selected-workload.error-text != "" : HxErrorBanner {
+                    message: root.selected-workload.error-text;
+                }
+
+                VerticalLayout {
+                    spacing: Theme.s4;
+                    Text { text: "Execution Timeline"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; }
+                    Text { text: root.selected-workload.timeline-text; font-family: Theme.font-family; font-size: Theme.type-caption; color: Theme.text-primary; wrap: word-wrap; }
+                }
+
+                VerticalLayout {
+                    spacing: Theme.s4;
+                    Text { text: "Input Configuration & Resources"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; }
+                    Text { text: root.selected-workload.config-summary; font-family: Theme.font-family; font-size: Theme.type-caption; color: Theme.text-primary; wrap: word-wrap; }
+                }
+
+                if root.selected-workload.result-summary != "" : VerticalLayout {
+                    spacing: Theme.s4;
+                    Text { text: "Result"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; }
+                    Text { text: root.selected-workload.result-summary; font-family: Theme.font-family; font-size: Theme.type-body; color: Theme.text-primary; wrap: word-wrap; }
+                    if root.selected-workload.metrics-pretty != "" : Rectangle {
+                        border-radius: Theme.r-sm;
+                        background: Theme.bg;
+                        border-width: 1px;
+                        border-color: Theme.border;
+                        VerticalLayout {
+                            padding: Theme.s8;
+                            Text {
+                                text: root.selected-workload.metrics-pretty;
+                                font-family: Theme.font-family;
+                                font-size: Theme.type-caption;
+                                color: Theme.text-secondary;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+                }
+
+                VerticalLayout {
+                    spacing: Theme.s4;
+                    Text { text: "Artifacts"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; }
+                    Text {
+                        text: root.selected-workload.artifacts-text != "" ? root.selected-workload.artifacts-text : "No artifacts persisted for this workload yet.";
+                        font-family: Theme.font-family;
+                        font-size: Theme.type-caption;
+                        color: Theme.text-secondary;
+                        wrap: word-wrap;
+                    }
+                }
+
+                VerticalLayout {
+                    spacing: Theme.s4;
+                    Text { text: "Structured Logs"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; }
+                    Rectangle {
+                        border-radius: Theme.r-sm;
+                        background: Theme.bg;
+                        border-width: 1px;
+                        border-color: Theme.border;
+                        VerticalLayout {
+                            padding: Theme.s8;
+                            Text {
+                                text: root.selected-workload.logs-text != "" ? root.selected-workload.logs-text : "No workload events recorded yet.";
+                                font-family: Theme.font-family;
+                                font-size: Theme.type-caption;
+                                color: Theme.text-secondary;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

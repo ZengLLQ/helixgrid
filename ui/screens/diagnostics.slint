@@ -1,0 +1,141 @@
+import { Theme } from "../themes/tokens.slint";
+import { EventRowData } from "../types.slint";
+import {
+    HxBadge, HxButton, ButtonVariant, HxMetricTile, HxSectionHeader
+} from "../components/primitives.slint";
+import { ScrollView } from "std-widgets.slint";
+
+export component DiagnosticsScreen inherits ScrollView {
+    in property <string> app-version;
+    in property <string> engine-status-text;
+    in property <int> engine-status-tone;
+    in property <string> os-compatibility;
+    in property <string> gpu-honest-status;
+    in property <string> db-status-summary;
+    in property <string> db-path;
+    in property <string> db-metrics;
+    in property <string> worker-pool-summary;
+    in property <string> ipc-status;
+    in property <string> recovery-summary-text;
+    in property <[EventRowData]> recent-errors;
+
+    callback export-diagnostics();
+    callback refresh-diagnostics();
+    callback open-about();
+
+    VerticalLayout {
+        padding: Theme.s24;
+        spacing: Theme.s24;
+
+        HxSectionHeader {
+            title: "System Diagnostics";
+            subtitle: "Verified runtime health, database integrity, IPC channels, and bundle export";
+            HorizontalLayout {
+                spacing: Theme.s8;
+                HxButton {
+                    label: "About HelixGrid";
+                    variant: ButtonVariant.ghost;
+                    clicked => { root.open-about(); }
+                }
+                HxButton {
+                    label: "Refresh";
+                    icon: @image-url("../../assets/icons/refresh.svg");
+                    has-icon: true;
+                    clicked => { root.refresh-diagnostics(); }
+                }
+                HxButton {
+                    label: "Export Bundle…";
+                    icon: @image-url("../../assets/icons/download.svg");
+                    has-icon: true;
+                    variant: ButtonVariant.primary;
+                    clicked => { root.export-diagnostics(); }
+                }
+            }
+        }
+
+        HorizontalLayout {
+            spacing: Theme.s16;
+            HxMetricTile {
+                horizontal-stretch: 1;
+                label: "Application Version";
+                value: "v" + root.app-version;
+                subtitle: root.os-compatibility;
+            }
+            HxMetricTile {
+                horizontal-stretch: 1;
+                label: "Engine Status";
+                value: root.engine-status-text;
+                subtitle: root.recovery-summary-text;
+                tone: root.engine-status-tone;
+            }
+            HxMetricTile {
+                horizontal-stretch: 1;
+                label: "Database Status";
+                value: root.db-status-summary;
+                subtitle: root.db-metrics;
+            }
+        }
+
+        Rectangle {
+            border-radius: Theme.r-md;
+            background: Theme.surface;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            VerticalLayout {
+                padding: Theme.s16;
+                spacing: Theme.s12;
+                Text { text: "Subsystem Details"; font-family: Theme.font-family; font-size: Theme.type-section; font-weight: 600; color: Theme.text-primary; }
+
+                VerticalLayout {
+                    spacing: Theme.s8;
+                    Text { text: "Workers: " + root.worker-pool-summary; font-family: Theme.font-family; font-size: Theme.type-body; color: Theme.text-primary; wrap: word-wrap; }
+                    Text { text: "IPC Transport: " + root.ipc-status; font-family: Theme.font-family; font-size: Theme.type-body; color: Theme.text-primary; wrap: word-wrap; }
+                    Text { text: "Compute Backend: " + root.gpu-honest-status; font-family: Theme.font-family; font-size: Theme.type-body; color: Theme.text-primary; wrap: word-wrap; }
+                    Text { text: "SQLite Path: " + root.db-path; font-family: Theme.font-family; font-size: Theme.type-caption; color: Theme.text-secondary; wrap: word-wrap; }
+                }
+            }
+        }
+
+        Rectangle {
+            border-radius: Theme.r-md;
+            background: Theme.surface;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            VerticalLayout {
+                padding: Theme.s16;
+                spacing: Theme.s12;
+                Text { text: "Recent Errors & Warnings"; font-family: Theme.font-family; font-size: Theme.type-section; font-weight: 600; color: Theme.text-primary; }
+
+                if root.recent-errors.length == 0 : Text {
+                    text: "No errors recorded in this session.";
+                    font-family: Theme.font-family;
+                    font-size: Theme.type-body;
+                    color: Theme.text-secondary;
+                }
+
+                for err in root.recent-errors : HorizontalLayout {
+                    spacing: Theme.s12;
+                    Text {
+                        width: 96px;
+                        text: err.time-text;
+                        font-family: Theme.font-family;
+                        font-size: Theme.type-caption;
+                        color: Theme.text-secondary;
+                        vertical-alignment: center;
+                    }
+                    HxBadge { text: err.severity-text; tone: err.severity-tone; }
+                    Text {
+                        horizontal-stretch: 1;
+                        text: err.message;
+                        font-family: Theme.font-family;
+                        font-size: Theme.type-body;
+                        color: Theme.text-primary;
+                        wrap: word-wrap;
+                    }
+                }
+            }
+        }
+    }
+}

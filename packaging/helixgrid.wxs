@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="HelixGrid"
+    Manufacturer="HelixGrid Engineering"
+    Version="0.1.0.0"
+    UpgradeCode="8A9F4E2D-1C34-4B8F-9A61-3E7B5D1F0C92"
+    Scope="perUser"
+    Compressed="yes">
+
+    <SummaryInformation
+      Description="HelixGrid Native Windows Compute Orchestration Platform"
+      Manufacturer="HelixGrid Engineering" />
+
+    <MajorUpgrade
+      DowngradeErrorMessage="A newer version of HelixGrid is already installed." />
+
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="HelixGridIcon.ico" SourceFile="$(var.RepoRoot)\assets\branding\helixgrid.ico" />
+    <Property Id="ARPPRODUCTICON" Value="HelixGridIcon.ico" />
+    <Property Id="ARPCOMMENTS" Value="Local-first Rust + Slint compute orchestration platform for Windows 11 x64." />
+    <Property Id="ARPNOREPAIR" Value="1" />
+
+    <!-- Binaries install under %LocalAppData%\Programs\HelixGrid so no UAC elevation is required,
+         and user databases/configs in %LocalAppData%\HelixGrid are preserved across upgrades and uninstalls. -->
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="UserProgramsDir" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="HelixGrid">
+          <Directory Id="FontsNoticeDir" Name="licenses" />
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AppStartMenuFolder" Name="HelixGrid" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="DesktopFolder" />
+
+    <ComponentGroup Id="HelixGridFiles" Directory="INSTALLFOLDER">
+      <Component Id="MainBinaries" Guid="2F3B1D80-7C12-4A9E-B104-91D5408C2F11">
+        <RegistryValue
+          Root="HKCU"
+          Key="Software\HelixGrid"
+          Name="InstallDir"
+          Type="string"
+          Value="[INSTALLFOLDER]"
+          KeyPath="yes" />
+        <File Id="HelixGridExe" Source="$(var.DistDir)\helixgrid.exe" />
+        <File Id="HelixGridWorkerExe" Source="$(var.DistDir)\helixgrid-worker.exe" />
+        <File Id="HelixGridLicense" Source="$(var.RepoRoot)\LICENSE" />
+      </Component>
+
+      <Component Id="StartMenuShortcuts" Directory="AppStartMenuFolder" Guid="7C2B1B22-6D13-48A1-A95B-B57A1A7E2D44">
+        <RegistryValue
+          Root="HKCU"
+          Key="Software\HelixGrid"
+          Name="StartMenuShortcut"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+        <Shortcut
+          Id="AppStartMenuShortcut"
+          Name="HelixGrid"
+          Description="Launch HelixGrid Compute Studio"
+          Target="[INSTALLFOLDER]helixgrid.exe"
+          WorkingDirectory="INSTALLFOLDER"
+          Icon="HelixGridIcon.ico" />
+        <Shortcut
+          Id="UninstallShortcut"
+          Name="Uninstall HelixGrid"
+          Description="Uninstall HelixGrid"
+          Target="[System64Folder]msiexec.exe"
+          Arguments="/x [ProductCode]" />
+        <RemoveFolder Id="RemoveStartMenuFolder" On="uninstall" />
+      </Component>
+
+      <Component Id="DesktopShortcutComponent" Directory="DesktopFolder" Guid="B82E4E9A-9D08-41D2-9914-C08840E1A112">
+        <RegistryValue
+          Root="HKCU"
+          Key="Software\HelixGrid"
+          Name="DesktopShortcut"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+        <Shortcut
+          Id="AppDesktopShortcut"
+          Name="HelixGrid"
+          Description="Launch HelixGrid Compute Studio"
+          Target="[INSTALLFOLDER]helixgrid.exe"
+          WorkingDirectory="INSTALLFOLDER"
+          Icon="HelixGridIcon.ico" />
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="LicenseNotices" Directory="FontsNoticeDir">
+      <Component Id="PoppinsLicenseFile" Guid="4B8C2014-8C19-4F00-AF9A-8176B2C32B09">
+        <RegistryValue
+          Root="HKCU"
+          Key="Software\HelixGrid"
+          Name="LicensesInstalled"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+        <File Id="PoppinsOflTxt" Source="$(var.RepoRoot)\assets\fonts\OFL.txt" />
+      </Component>
+    </ComponentGroup>
+
+    <Feature Id="ProductFeature" Title="HelixGrid Studio &amp; Worker Runtime" Level="1">
+      <ComponentGroupRef Id="HelixGridFiles" />
+      <ComponentGroupRef Id="LicenseNotices" />
+    </Feature>
+  </Package>
+</Wix>

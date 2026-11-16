@@ -1,0 +1,536 @@
+import { Theme } from "themes/tokens.slint";
+import {
+    WorkerRowData, WorkloadRowData, WorkflowRowData, EventRowData,
+    RegisteredExeRowData, UiSettingsState
+} from "types.slint";
+import {
+    HxSidebar, HxToast, HxConfirmDialog, HxAboutDialog,
+    HxSubmitWorkloadDialog, HxCreateWorkflowDialog, HxRegisterExeDialog
+} from "components/shell.slint";
+import { OverviewScreen } from "screens/overview.slint";
+import { WorkersScreen } from "screens/workers.slint";
+import { WorkloadsScreen } from "screens/workloads.slint";
+import { WorkflowsScreen } from "screens/workflows.slint";
+import { AnalyticsScreen } from "screens/analytics.slint";
+import { ActivityScreen } from "screens/activity.slint";
+import { SettingsScreen } from "screens/settings.slint";
+import { DiagnosticsScreen } from "screens/diagnostics.slint";
+
+export { Theme, WorkerRowData, WorkloadRowData, WorkflowRowData, EventRowData, RegisteredExeRowData, UiSettingsState }
+
+export component AppWindow inherits Window {
+    title: "HelixGrid Studio";
+    icon: @image-url("../assets/branding/helixgrid.png");
+    default-font-family: "Poppins";
+    default-font-size: 13px;
+    background: Theme.bg;
+
+    min-width: 1024px;
+    min-height: 700px;
+    preferred-width: 1440px;
+    preferred-height: 900px;
+
+    // Navigation & global UI state
+    in-out property <int> active-nav: 0;
+    in-out property <bool> dark-mode <=> Theme.dark-mode;
+    in-out property <bool> reduced-motion <=> Theme.reduced-motion;
+
+    // Header / Overview summary properties
+    in-out property <string> app-version: "0.1.0";
+    in-out property <string> health-text: "Healthy";
+    in-out property <int> health-tone: 2;
+    in-out property <string> health-reason: "Initializing local control plane…";
+    in-out property <int> active-workers-count: 0;
+    in-out property <int> running-workloads-count: 0;
+    in-out property <string> cpu-text: "Unavailable";
+    in-out property <string> cpu-sub: "";
+    in-out property <string> mem-text: "Unavailable";
+    in-out property <string> mem-sub: "";
+    in-out property <string> workers-text: "0 / 0";
+    in-out property <string> workers-sub: "";
+    in-out property <string> queue-text: "0 running";
+    in-out property <string> queue-sub: "";
+    in-out property <string> attention-message: "";
+
+    // Charts
+    in-out property <string> cpu-chart-line: "";
+    in-out property <string> cpu-chart-area: "";
+    in-out property <bool> cpu-chart-has-data: false;
+    in-out property <string> mem-chart-line: "";
+    in-out property <string> mem-chart-area: "";
+    in-out property <bool> mem-chart-has-data: false;
+    in-out property <string> dur-chart-line: "";
+    in-out property <string> dur-chart-area: "";
+    in-out property <bool> dur-chart-has-data: false;
+    in-out property <string> dur-chart-max-label: "0 ms";
+
+    // Lists
+    in-out property <[WorkerRowData]> workers: [];
+    in-out property <[WorkloadRowData]> active-workloads: [];
+    in-out property <[WorkloadRowData]> workloads: [];
+    in-out property <[WorkflowRowData]> workflows: [];
+    in-out property <[EventRowData]> recent-events: [];
+    in-out property <[EventRowData]> events: [];
+    in-out property <[EventRowData]> recent-errors: [];
+    in-out property <[RegisteredExeRowData]> registered-executables: [];
+
+    // Selections & filters
+    in-out property <string> selected-worker-id: "";
+    in-out property <WorkerRowData> selected-worker;
+    in-out property <bool> has-selected-worker: false;
+
+    in-out property <string> selected-workload-id: "";
+    in-out property <WorkloadRowData> selected-workload;
+    in-out property <bool> has-selected-workload: false;
+    in-out property <int> workload-status-filter: 0;
+    in-out property <string> workload-search-query: "";
+
+    in-out property <string> selected-workflow-id: "";
+    in-out property <WorkflowRowData> selected-workflow;
+    in-out property <bool> has-selected-workflow: false;
+
+    in-out property <int> activity-severity-filter: 0;
+    in-out property <int> activity-window-filter: 0;
+    in-out property <string> activity-search-query: "";
+
+    // Analytics summary
+    in-out property <string> throughput-text: "0.0 / min";
+    in-out property <string> queue-latency-text: "0 ms";
+    in-out property <string> avg-duration-text: "Unavailable";
+    in-out property <string> worker-util-text: "0%";
+    in-out property <string> cpu-avg-text: "Unavailable";
+    in-out property <string> cpu-peak-text: "Unavailable";
+    in-out property <string> mem-avg-text: "Unavailable";
+    in-out property <string> completion-ratio-text: "0 completed";
+
+    // Settings properties
+    in-out property <int> settings-theme-idx: 0;
+    in-out property <int> settings-reduced-motion-idx: 0;
+    in-out property <int> settings-scheduling-policy-idx: 0;
+    in-out property <string> settings-max-queue-depth: "500";
+    in-out property <string> settings-max-workers: "4";
+    in-out property <string> settings-max-concurrent-workloads: "4";
+    in-out property <string> settings-cpu-ceiling-pct: "85";
+    in-out property <string> settings-mem-ceiling-pct: "80";
+    in-out property <string> settings-reserved-mem-mb: "2048";
+    in-out property <string> settings-default-timeout-sec: "120";
+    in-out property <bool> settings-auto-recover: true;
+    in-out property <string> settings-heartbeat-interval-ms: "1500";
+    in-out property <string> settings-heartbeat-timeout-ms: "8000";
+    in-out property <string> settings-snapshot-retention: "10000";
+    in-out property <string> settings-event-retention: "20000";
+    in-out property <string> settings-max-log-mb: "10";
+    in-out property <string> data-dir-path: "";
+    in-out property <string> settings-error: "";
+
+    // Diagnostics properties
+    in-out property <string> os-compatibility: "Windows 11 x64";
+    in-out property <string> gpu-honest-status: "CPU-only validated execution (GPU offload disabled in v1)";
+    in-out property <string> db-status-summary: "Checking…";
+    in-out property <string> db-path: "";
+    in-out property <string> db-metrics: "";
+    in-out property <string> worker-pool-summary: "";
+    in-out property <string> ipc-status: "";
+    in-out property <string> recovery-summary-text: "";
+
+    // Modal & toast state
+    in-out property <string> toast-message: "";
+    in-out property <bool> toast-is-error: false;
+    in-out property <bool> show-submit-dialog: false;
+    in-out property <bool> show-workflow-dialog: false;
+    in-out property <bool> show-register-exe-dialog: false;
+    in-out property <bool> show-about-dialog: false;
+    in-out property <bool> show-confirm-dialog: false;
+    in-out property <string> confirm-title: "";
+    in-out property <string> confirm-message: "";
+    in-out property <string> confirm-action-kind: "";
+    in-out property <string> confirm-target-id: "";
+
+    // Submit dialog fields
+    in-out property <string> sub-name: "CPU Prime Benchmark";
+    in-out property <int> sub-type-idx: 0;
+    in-out property <int> sub-priority-idx: 1;
+    in-out property <string> sub-param-a: "2";
+    in-out property <string> sub-param-b: "1500";
+    in-out property <string> sub-param-c: "10000";
+    in-out property <string> sub-cpu-cores: "1";
+    in-out property <string> sub-memory-mb: "128";
+    in-out property <string> sub-timeout-sec: "60";
+    in-out property <string> sub-error: "";
+
+    // Workflow dialog fields
+    in-out property <string> wf-name: "Research Compute Pipeline";
+    in-out property <string> wf-desc: "Multi-stage DAG execution";
+    in-out property <int> wf-template-idx: 0;
+    in-out property <string> wf-stage1-iters: "800";
+    in-out property <string> wf-stage2-dim: "180";
+    in-out property <string> wf-stage3-items: "3000";
+    in-out property <string> wf-error: "";
+
+    // Register Exe dialog fields
+    in-out property <string> reg-id: "";
+    in-out property <string> reg-name: "";
+    in-out property <string> reg-path: "";
+    in-out property <string> reg-wd: "";
+    in-out property <string> reg-desc: "";
+    in-out property <string> reg-error: "";
+
+    // Callbacks to Rust application layer
+    callback refresh-requested();
+    callback spawn-worker();
+    callback shutdown-worker(string);
+    callback restart-worker(string);
+    callback submit-workload();
+    callback pick-batch-folder();
+    callback cancel-workload(string);
+    callback safe-retry-workload(string);
+    callback create-workflow();
+    callback cancel-workflow(string);
+    callback workload-filter-changed();
+    callback activity-filter-changed();
+    callback select-worker(string);
+    callback select-workload(string);
+    callback select-workflow(string);
+    callback theme-changed(int);
+    callback reduced-motion-changed(int);
+    callback save-settings();
+    callback backup-database();
+    callback export-diagnostics();
+    callback pick-reg-exe-file();
+    callback pick-reg-exe-dir();
+    callback save-registered-exe();
+    callback remove-registered-exe(string);
+
+    // Keyboard shortcuts (Ctrl+1..8, Ctrl+N, Ctrl+,, F5, Esc)
+    FocusScope {
+        width: parent.width;
+        height: parent.height;
+
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.show-submit-dialog = false;
+                root.show-workflow-dialog = false;
+                root.show-register-exe-dialog = false;
+                root.show-about-dialog = false;
+                root.show-confirm-dialog = false;
+                return accept;
+            }
+            if (event.text == Key.F5) {
+                root.refresh-requested();
+                return accept;
+            }
+            if (event.modifiers.control) {
+                if (event.text == "1") { root.active-nav = 0; return accept; }
+                if (event.text == "2") { root.active-nav = 1; return accept; }
+                if (event.text == "3") { root.active-nav = 2; return accept; }
+                if (event.text == "4") { root.active-nav = 3; return accept; }
+                if (event.text == "5") { root.active-nav = 4; return accept; }
+                if (event.text == "6") { root.active-nav = 5; return accept; }
+                if (event.text == "7") { root.active-nav = 6; return accept; }
+                if (event.text == "8") { root.active-nav = 7; return accept; }
+                if (event.text == "n" || event.text == "N") {
+                    root.sub-error = "";
+                    root.show-submit-dialog = true;
+                    return accept;
+                }
+                if (event.text == ",") {
+                    root.active-nav = 6;
+                    return accept;
+                }
+            }
+            reject
+        }
+
+        HorizontalLayout {
+            HxSidebar {
+                active-nav <=> root.active-nav;
+                engine-health-text: root.health-text;
+                engine-health-tone: root.health-tone;
+                active-workers-count: root.active-workers-count;
+                running-workloads-count: root.running-workloads-count;
+                navigate(idx) => { root.active-nav = idx; }
+            }
+
+            Rectangle {
+                horizontal-stretch: 1;
+                background: Theme.bg;
+
+                if root.active-nav == 0 : OverviewScreen {
+                    width: parent.width;
+                    height: parent.height;
+                    health-text: root.health-text;
+                    health-tone: root.health-tone;
+                    health-reason: root.health-reason;
+                    cpu-text: root.cpu-text;
+                    cpu-sub: root.cpu-sub;
+                    mem-text: root.mem-text;
+                    mem-sub: root.mem-sub;
+                    workers-text: root.workers-text;
+                    workers-sub: root.workers-sub;
+                    queue-text: root.queue-text;
+                    queue-sub: root.queue-sub;
+                    attention-message: root.attention-message;
+                    cpu-chart-line: root.cpu-chart-line;
+                    cpu-chart-area: root.cpu-chart-area;
+                    cpu-chart-has-data: root.cpu-chart-has-data;
+                    mem-chart-line: root.mem-chart-line;
+                    mem-chart-area: root.mem-chart-area;
+                    mem-chart-has-data: root.mem-chart-has-data;
+                    active-workloads: root.active-workloads;
+                    recent-events: root.recent-events;
+                    open-submit-workload => {
+                        root.sub-error = "";
+                        root.show-submit-dialog = true;
+                    }
+                    inspect-workload(id) => {
+                        root.select-workload(id);
+                        root.active-nav = 2;
+                    }
+                    go-to-workloads => { root.active-nav = 2; }
+                    go-to-activity => { root.active-nav = 5; }
+                }
+
+                if root.active-nav == 1 : WorkersScreen {
+                    width: parent.width;
+                    height: parent.height;
+                    workers: root.workers;
+                    selected-worker-id <=> root.selected-worker-id;
+                    selected-worker: root.selected-worker;
+                    has-selection: root.has-selected-worker;
+                    select-worker(id) => { root.select-worker(id); }
+                    close-inspector => {
+                        root.selected-worker-id = "";
+                        root.has-selected-worker = false;
+                    }
+                    spawn-worker => { root.spawn-worker(); }
+                    shutdown-worker(id) => {
+                        root.confirm-title = "Shut Down Worker";
+                        root.confirm-message = "Gracefully stop worker " + id + "? Any active workload on this worker will be marked Interrupted.";
+                        root.confirm-action-kind = "shutdown-worker";
+                        root.confirm-target-id = id;
+                        root.show-confirm-dialog = true;
+                    }
+                    restart-worker(id) => { root.restart-worker(id); }
+                    open-diagnostics => { root.active-nav = 7; }
+                }
+
+                if root.active-nav == 2 : WorkloadsScreen {
+                    width: parent.width;
+                    height: parent.height;
+                    workloads: root.workloads;
+                    status-filter-idx <=> root.workload-status-filter;
+                    search-query <=> root.workload-search-query;
+                    selected-workload-id <=> root.selected-workload-id;
+                    selected-workload: root.selected-workload;
+                    has-selection: root.has-selected-workload;
+                    filter-changed => { root.workload-filter-changed(); }
+                    select-workload(id) => { root.select-workload(id); }
+                    close-inspector => {
+                        root.selected-workload-id = "";
+                        root.has-selected-workload = false;
+                    }
+                    open-submit-dialog => {
+                        root.sub-error = "";
+                        root.show-submit-dialog = true;
+                    }
+                    cancel-workload(id) => {
+                        root.confirm-title = "Cancel Workload";
+                        root.confirm-message = "Cancel execution for workload " + id + "?";
+                        root.confirm-action-kind = "cancel-workload";
+                        root.confirm-target-id = id;
+                        root.show-confirm-dialog = true;
+                    }
+                    safe-retry-workload(id) => { root.safe-retry-workload(id); }
+                }
+
+                if root.active-nav == 3 : WorkflowsScreen {
+                    width: parent.width;
+                    height: parent.height;
+                    workflows: root.workflows;
+                    selected-workflow-id <=> root.selected-workflow-id;
+                    selected-workflow: root.selected-workflow;
+                    has-selection: root.has-selected-workflow;
+                    open-create-workflow => {
+                        root.wf-error = "";
+                        root.show-workflow-dialog = true;
+                    }
+                    select-workflow(id) => { root.select-workflow(id); }
+                    close-inspector => {
+                        root.selected-workflow-id = "";
+                        root.has-selected-workflow = false;
+                    }
+                    cancel-workflow(id) => { root.cancel-workflow(id); }
+                }
+
+                if root.active-nav == 4 : AnalyticsScreen {
+                    width: parent.width;
+                    height: parent.height;
+                    throughput-text: root.throughput-text;
+                    queue-latency-text: root.queue-latency-text;
+                    avg-duration-text: root.avg-duration-text;
+                    worker-util-text: root.worker-util-text;
+                    cpu-avg-text: root.cpu-avg-text;
+                    cpu-peak-text: root.cpu-peak-text;
+                    mem-avg-text: root.mem-avg-text;
+                    completion-ratio-text: root.completion-ratio-text;
+                    cpu-chart-line: root.cpu-chart-line;
+                    cpu-chart-area: root.cpu-chart-area;
+                    cpu-chart-has-data: root.cpu-chart-has-data;
+                    mem-chart-line: root.mem-chart-line;
+                    mem-chart-area: root.mem-chart-area;
+                    mem-chart-has-data: root.mem-chart-has-data;
+                    dur-chart-line: root.dur-chart-line;
+                    dur-chart-area: root.dur-chart-area;
+                    dur-chart-has-data: root.dur-chart-has-data;
+                    dur-chart-max-label: root.dur-chart-max-label;
+                }
+
+                if root.active-nav == 5 : ActivityScreen {
+                    width: parent.width;
+                    height: parent.height;
+                    events: root.events;
+                    severity-filter-idx <=> root.activity-severity-filter;
+                    window-filter-idx <=> root.activity-window-filter;
+                    search-query <=> root.activity-search-query;
+                    filter-changed => { root.activity-filter-changed(); }
+                }
+
+                if root.active-nav == 6 : SettingsScreen {
+                    width: parent.width;
+                    height: parent.height;
+                    theme-idx <=> root.settings-theme-idx;
+                    reduced-motion-idx <=> root.settings-reduced-motion-idx;
+                    scheduling-policy-idx <=> root.settings-scheduling-policy-idx;
+                    max-queue-depth <=> root.settings-max-queue-depth;
+                    max-workers <=> root.settings-max-workers;
+                    max-concurrent-workloads <=> root.settings-max-concurrent-workloads;
+                    cpu-ceiling-pct <=> root.settings-cpu-ceiling-pct;
+                    mem-ceiling-pct <=> root.settings-mem-ceiling-pct;
+                    reserved-mem-mb <=> root.settings-reserved-mem-mb;
+                    default-timeout-sec <=> root.settings-default-timeout-sec;
+                    auto-recover <=> root.settings-auto-recover;
+                    heartbeat-interval-ms <=> root.settings-heartbeat-interval-ms;
+                    heartbeat-timeout-ms <=> root.settings-heartbeat-timeout-ms;
+                    snapshot-retention <=> root.settings-snapshot-retention;
+                    event-retention <=> root.settings-event-retention;
+                    max-log-mb <=> root.settings-max-log-mb;
+                    data-dir-path: root.data-dir-path;
+                    registered-executables: root.registered-executables;
+                    settings-error: root.settings-error;
+                    theme-changed(idx) => { root.theme-changed(idx); }
+                    reduced-motion-changed(idx) => { root.reduced-motion-changed(idx); }
+                    save-settings => { root.save-settings(); }
+                    backup-database => { root.backup-database(); }
+                    open-register-exe => {
+                        root.reg-error = "";
+                        root.show-register-exe-dialog = true;
+                    }
+                    remove-registered-exe(id) => { root.remove-registered-exe(id); }
+                }
+
+                if root.active-nav == 7 : DiagnosticsScreen {
+                    width: parent.width;
+                    height: parent.height;
+                    app-version: root.app-version;
+                    engine-status-text: root.health-text;
+                    engine-status-tone: root.health-tone;
+                    os-compatibility: root.os-compatibility;
+                    gpu-honest-status: root.gpu-honest-status;
+                    db-status-summary: root.db-status-summary;
+                    db-path: root.db-path;
+                    db-metrics: root.db-metrics;
+                    worker-pool-summary: root.worker-pool-summary;
+                    ipc-status: root.ipc-status;
+                    recovery-summary-text: root.recovery-summary-text;
+                    recent-errors: root.recent-errors;
+                    export-diagnostics => { root.export-diagnostics(); }
+                    refresh-diagnostics => { root.refresh-requested(); }
+                    open-about => { root.show-about-dialog = true; }
+                }
+            }
+        }
+
+        // Toast notification overlay (bottom-right)
+        if root.toast-message != "" : HxToast {
+            x: parent.width - self.width - Theme.s24;
+            y: parent.height - self.height - Theme.s24;
+            width: 380px;
+            message: root.toast-message;
+            is-error: root.toast-is-error;
+            dismiss => { root.toast-message = ""; }
+        }
+
+        // Modal overlays
+        if root.show-submit-dialog : HxSubmitWorkloadDialog {
+            width: parent.width;
+            height: parent.height;
+            name <=> root.sub-name;
+            type-idx <=> root.sub-type-idx;
+            priority-idx <=> root.sub-priority-idx;
+            param-a <=> root.sub-param-a;
+            param-b <=> root.sub-param-b;
+            param-c <=> root.sub-param-c;
+            cpu-cores <=> root.sub-cpu-cores;
+            memory-mb <=> root.sub-memory-mb;
+            timeout-sec <=> root.sub-timeout-sec;
+            validation-error <=> root.sub-error;
+            pick-folder => { root.pick-batch-folder(); }
+            submit => { root.submit-workload(); }
+            cancel => { root.show-submit-dialog = false; }
+        }
+
+        if root.show-workflow-dialog : HxCreateWorkflowDialog {
+            width: parent.width;
+            height: parent.height;
+            name <=> root.wf-name;
+            description <=> root.wf-desc;
+            template-idx <=> root.wf-template-idx;
+            stage1-iterations <=> root.wf-stage1-iters;
+            stage2-dimension <=> root.wf-stage2-dim;
+            stage3-items <=> root.wf-stage3-items;
+            validation-error <=> root.wf-error;
+            create-and-run => { root.create-workflow(); }
+            cancel => { root.show-workflow-dialog = false; }
+        }
+
+        if root.show-register-exe-dialog : HxRegisterExeDialog {
+            width: parent.width;
+            height: parent.height;
+            exe-id <=> root.reg-id;
+            display-name <=> root.reg-name;
+            executable-path <=> root.reg-path;
+            allowed-working-dir <=> root.reg-wd;
+            description <=> root.reg-desc;
+            validation-error <=> root.reg-error;
+            pick-executable => { root.pick-reg-exe-file(); }
+            pick-working-dir => { root.pick-reg-exe-dir(); }
+            save => { root.save-registered-exe(); }
+            cancel => { root.show-register-exe-dialog = false; }
+        }
+
+        if root.show-confirm-dialog : HxConfirmDialog {
+            width: parent.width;
+            height: parent.height;
+            title: root.confirm-title;
+            message: root.confirm-message;
+            destructive: true;
+            confirm-label: "Confirm";
+            confirmed => {
+                root.show-confirm-dialog = false;
+                if (root.confirm-action-kind == "shutdown-worker") {
+                    root.shutdown-worker(root.confirm-target-id);
+                } else if (root.confirm-action-kind == "cancel-workload") {
+                    root.cancel-workload(root.confirm-target-id);
+                }
+            }
+            cancelled => { root.show-confirm-dialog = false; }
+        }
+
+        if root.show-about-dialog : HxAboutDialog {
+            width: parent.width;
+            height: parent.height;
+            app-version: root.app-version;
+            close => { root.show-about-dialog = false; }
+        }
+    }
+}

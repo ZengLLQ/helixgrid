@@ -1,0 +1,92 @@
+export struct WorkerRowData {
+    id: string,
+    name: string,
+    pid-text: string,
+    status-text: string,
+    status-tone: int,
+    cpu-text: string,
+    memory-text: string,
+    current-workload: string,
+    uptime-text: string,
+    heartbeat-text: string,
+    reserved-text: string,
+    completed-count: int,
+    failed-count: int,
+    isolation-note: string,
+    is-alive: bool,
+}
+
+export struct WorkloadRowData {
+    id: string,
+    short-id: string,
+    name: string,
+    type-text: string,
+    status-text: string,
+    status-tone: int,
+    priority-text: string,
+    worker-text: string,
+    submitted-text: string,
+    duration-text: string,
+    progress-pct: float,
+    progress-indeterminate: bool,
+    progress-text: string,
+    can-cancel: bool,
+    can-retry: bool,
+    description: string,
+    config-summary: string,
+    result-summary: string,
+    error-text: string,
+    metrics-pretty: string,
+    timeline-text: string,
+    artifacts-text: string,
+    logs-text: string,
+}
+
+export struct WorkflowRowData {
+    id: string,
+    short-id: string,
+    name: string,
+    description: string,
+    status-text: string,
+    status-tone: int,
+    tasks-summary: string,
+    created-text: string,
+    stages-detail: string,
+    can-cancel: bool,
+}
+
+export struct EventRowData {
+    id: string,
+    time-text: string,
+    severity-text: string,
+    severity-tone: int,
+    kind-text: string,
+    message: string,
+    context-text: string,
+}
+
+export struct RegisteredExeRowData {
+    id: string,
+    display-name: string,
+    executable-path: string,
+    working-dir: string,
+    retry-safety: string,
+    enabled: bool,
+}
+
+export struct UiSettingsState {
+    dark-mode: bool,
+    reduced-motion-override: int, // 0 = System, 1 = On, 2 = Off
+    scheduling-policy-idx: int,   // 0 = PriorityResourceAware, 1 = FifoResourceAware
+    max-workers: int,
+    max-concurrent-workloads: int,
+    max-queue-depth: int,
+    cpu-ceiling-pct: int,
+    memory-ceiling-pct: int,
+    reserved-mem-mb: int,
+    default-timeout-sec: int,
+    snapshot-retention: int,
+    event-retention: int,
+    max-log-mb: int,
+    auto-recover: bool,
+}

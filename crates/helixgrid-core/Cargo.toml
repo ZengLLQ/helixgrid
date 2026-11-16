@@ -1,0 +1,27 @@
+[package]
+name = "helixgrid-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+helixgrid-config.workspace = true
+helixgrid-domain.workspace = true
+helixgrid-executor.workspace = true
+helixgrid-observability.workspace = true
+helixgrid-platform-windows.workspace = true
+helixgrid-protocol.workspace = true
+helixgrid-resource.workspace = true
+helixgrid-scheduler.workspace = true
+helixgrid-security.workspace = true
+helixgrid-storage.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

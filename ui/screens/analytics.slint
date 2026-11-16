@@ -1,0 +1,96 @@
+import { Theme } from "../themes/tokens.slint";
+import { HxMetricTile, HxLineChart, HxSectionHeader } from "../components/primitives.slint";
+import { ScrollView } from "std-widgets.slint";
+
+export component AnalyticsScreen inherits ScrollView {
+    in property <string> throughput-text;
+    in property <string> queue-latency-text;
+    in property <string> avg-duration-text;
+    in property <string> worker-util-text;
+    in property <string> cpu-avg-text;
+    in property <string> cpu-peak-text;
+    in property <string> mem-avg-text;
+    in property <string> completion-ratio-text;
+
+    in property <string> cpu-chart-line;
+    in property <string> cpu-chart-area;
+    in property <bool> cpu-chart-has-data;
+    in property <string> mem-chart-line;
+    in property <string> mem-chart-area;
+    in property <bool> mem-chart-has-data;
+    in property <string> dur-chart-line;
+    in property <string> dur-chart-area;
+    in property <bool> dur-chart-has-data;
+    in property <string> dur-chart-max-label;
+
+    VerticalLayout {
+        padding: Theme.s24;
+        spacing: Theme.s24;
+
+        HxSectionHeader {
+            title: "Performance Analytics";
+            subtitle: "Historical telemetry persisted in SQLite — all figures reflect real measured samples";
+        }
+
+        HorizontalLayout {
+            spacing: Theme.s16;
+            HxMetricTile {
+                horizontal-stretch: 1;
+                label: "Throughput";
+                value: root.throughput-text;
+                subtitle: root.completion-ratio-text;
+            }
+            HxMetricTile {
+                horizontal-stretch: 1;
+                label: "Mean Queue Latency";
+                value: root.queue-latency-text;
+                subtitle: "Measured dispatch delay";
+            }
+            HxMetricTile {
+                horizontal-stretch: 1;
+                label: "Mean Duration";
+                value: root.avg-duration-text;
+                subtitle: "Completed executions";
+            }
+            HxMetricTile {
+                horizontal-stretch: 1;
+                label: "Worker Utilization";
+                value: root.worker-util-text;
+                subtitle: "Reserved vs total capacity";
+            }
+        }
+
+        HorizontalLayout {
+            spacing: Theme.s16;
+            HxLineChart {
+                horizontal-stretch: 1;
+                title: "Historical CPU Utilization (%)";
+                current-label: "Avg " + root.cpu-avg-text + " · Peak " + root.cpu-peak-text;
+                line-commands: root.cpu-chart-line;
+                area-commands: root.cpu-chart-area;
+                has-data: root.cpu-chart-has-data;
+                line-color: Theme.accent;
+            }
+            HxLineChart {
+                horizontal-stretch: 1;
+                title: "Historical Memory Utilization (%)";
+                current-label: "Avg " + root.mem-avg-text;
+                line-commands: root.mem-chart-line;
+                area-commands: root.mem-chart-area;
+                has-data: root.mem-chart-has-data;
+                line-color: Theme.success-fg;
+            }
+        }
+
+        HxLineChart {
+            title: "Recent Completed Workload Durations";
+            current-label: "Mean " + root.avg-duration-text;
+            y-top-label: root.dur-chart-max-label;
+            y-bottom-label: "0 ms";
+            line-commands: root.dur-chart-line;
+            area-commands: root.dur-chart-area;
+            has-data: root.dur-chart-has-data;
+            line-color: Theme.warning-fg;
+        }
+    }
+}

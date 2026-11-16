@@ -1,0 +1,298 @@
+import { Theme } from "../themes/tokens.slint";
+import { WorkerRowData, WorkloadRowData, EventRowData } from "../types.slint";
+import {
+    HxBadge, HxButton, ButtonVariant, HxMetricTile, HxLineChart,
+    HxProgressBar, HxSectionHeader, HxEmptyState, HxErrorBanner
+} from "../components/primitives.slint";
+import { ScrollView } from "std-widgets.slint";
+
+export component OverviewScreen inherits ScrollView {
+    in property <string> health-text;
+    in property <int> health-tone;
+    in property <string> health-reason;
+    in property <string> cpu-text;
+    in property <string> cpu-sub;
+    in property <string> mem-text;
+    in property <string> mem-sub;
+    in property <string> workers-text;
+    in property <string> workers-sub;
+    in property <string> queue-text;
+    in property <string> queue-sub;
+    in property <string> attention-message;
+    in property <string> cpu-chart-line;
+    in property <string> cpu-chart-area;
+    in property <bool> cpu-chart-has-data;
+    in property <string> mem-chart-line;
+    in property <string> mem-chart-area;
+    in property <bool> mem-chart-has-data;
+    in property <[WorkloadRowData]> active-workloads;
+    in property <[EventRowData]> recent-events;
+
+    callback open-submit-workload();
+    callback inspect-workload(string);
+    callback go-to-workloads();
+    callback go-to-activity();
+
+    VerticalLayout {
+        padding: Theme.s24;
+        spacing: Theme.s24;
+
+        // Top health & quick-action summary
+        Rectangle {
+            border-radius: Theme.r-md;
+            background: Theme.surface;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            HorizontalLayout {
+                padding: Theme.s16;
+                spacing: Theme.s16;
+                alignment: space-between;
+
+                HorizontalLayout {
+                    spacing: Theme.s12;
+                    HxBadge {
+                        y: (parent.height - self.height) / 2;
+                        text: root.health-text;
+                        tone: root.health-tone;
+                    }
+                    VerticalLayout {
+                        spacing: 2px;
+                        Text {
+                            text: "Local Compute Control Plane";
+                            font-family: Theme.font-family;
+                            font-size: Theme.type-section;
+                            font-weight: 600;
+                            color: Theme.text-primary;
+                        }
+                        Text {
+                            text: root.health-reason;
+                            font-family: Theme.font-family;
+                            font-size: Theme.type-caption;
+                            color: Theme.text-secondary;
+                        }
+                    }
+                }
+
+                HxButton {
+                    label: "New Workload";
+                    icon: @image-url("../../assets/icons/plus.svg");
+                    has-icon: true;
+                    variant: ButtonVariant.primary;
+                    clicked => { root.open-submit-workload(); }
+                }
+            }
+        }
+
+        if root.attention-message != "" : HxErrorBanner {
+            message: root.attention-message;
+            is-warning: true;
+            HxButton {
+                label: "Review Workloads";
+                variant: ButtonVariant.secondary;
+                control-height: 28px;
+                clicked => { root.go-to-workloads(); }
+            }
+        }
+
+        // Primary 4 resource & capacity tiles
+        HorizontalLayout {
+            spacing: Theme.s16;
+            HxMetricTile {
+                horizontal-stretch: 1;
+                label: "Host CPU Utilization";
+                value: root.cpu-text;
+                subtitle: root.cpu-sub;
+            }
+            HxMetricTile {
+                horizontal-stretch: 1;
+                label: "Physical Memory";
+                value: root.mem-text;
+                subtitle: root.mem-sub;
+            }
+            HxMetricTile {
+                horizontal-stretch: 1;
+                label: "Worker Pool";
+                value: root.workers-text;
+                subtitle: root.workers-sub;
+            }
+            HxMetricTile {
+                horizontal-stretch: 1;
+                label: "Running & Queued";
+                value: root.queue-text;
+                subtitle: root.queue-sub;
+            }
+        }
+
+        // Live telemetry charts
+        HorizontalLayout {
+            spacing: Theme.s16;
+            HxLineChart {
+                horizontal-stretch: 1;
+                title: "Host CPU Trend";
+                current-label: root.cpu-text;
+                line-commands: root.cpu-chart-line;
+                area-commands: root.cpu-chart-area;
+                has-data: root.cpu-chart-has-data;
+                line-color: Theme.accent;
+            }
+            HxLineChart {
+                horizontal-stretch: 1;
+                title: "Memory Utilization Trend";
+                current-label: root.mem-text;
+                line-commands: root.mem-chart-line;
+                area-commands: root.mem-chart-area;
+                has-data: root.mem-chart-has-data;
+                line-color: Theme.success-fg;
+            }
+        }
+
+        // Currently executing workloads
+        VerticalLayout {
+            spacing: Theme.s12;
+            HxSectionHeader {
+                title: "Active Executions";
+                subtitle: "Workloads currently queued, starting, or executing on isolated workers";
+                HxButton {
+                    label: "View All";
+                    variant: ButtonVariant.ghost;
+                    control-height: 28px;
+                    clicked => { root.go-to-workloads(); }
+                }
+            }
+
+            if root.active-workloads.length == 0 : HxEmptyState {
+                title: "No active workloads";
+                description: "The local worker pool is idle and ready. Submit a benchmark, numerical solver, batch pipeline, or workflow.";
+            }
+
+            if root.active-workloads.length > 0 : Rectangle {
+                border-radius: Theme.r-md;
+                background: Theme.surface;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                VerticalLayout {
+                    padding: Theme.s8;
+                    spacing: Theme.s4;
+                    for wl in root.active-workloads : Rectangle {
+                        height: 52px;
+                        border-radius: Theme.r-sm;
+                        background: row-ta.has-hover ? Theme.surface-hover : transparent;
+                        row-ta := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.inspect-workload(wl.id); }
+                        }
+                        HorizontalLayout {
+                            padding-left: Theme.s12;
+                            padding-right: Theme.s12;
+                            spacing: Theme.s16;
+                            VerticalLayout {
+                                horizontal-stretch: 2;
+                                alignment: center;
+                                spacing: 2px;
+                                Text {
+                                    text: wl.name;
+                                    font-family: Theme.font-family;
+                                    font-size: Theme.type-body;
+                                    font-weight: 500;
+                                    color: Theme.text-primary;
+                                    overflow: elide;
+                                }
+                                Text {
+                                    text: wl.type-text + " · " + wl.worker-text;
+                                    font-family: Theme.font-family;
+                                    font-size: Theme.type-caption;
+                                    color: Theme.text-secondary;
+                                    overflow: elide;
+                                }
+                            }
+                            VerticalLayout {
+                                horizontal-stretch: 2;
+                                alignment: center;
+                                spacing: 4px;
+                                HxProgressBar {
+                                    percent: wl.progress-pct;
+                                    indeterminate: wl.progress-indeterminate;
+                                }
+                                Text {
+                                    text: wl.progress-text;
+                                    font-family: Theme.font-family;
+                                    font-size: Theme.type-caption;
+                                    color: Theme.text-secondary;
+                                }
+                            }
+                            HorizontalLayout {
+                                alignment: end;
+                                padding-top: 14px;
+                                HxBadge {
+                                    text: wl.status-text;
+                                    tone: wl.status-tone;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Recent activity preview
+        VerticalLayout {
+            spacing: Theme.s12;
+            HxSectionHeader {
+                title: "Recent Activity";
+                subtitle: "Latest scheduler, worker, and recovery events";
+                HxButton {
+                    label: "Open Log";
+                    variant: ButtonVariant.ghost;
+                    control-height: 28px;
+                    clicked => { root.go-to-activity(); }
+                }
+            }
+
+            Rectangle {
+                border-radius: Theme.r-md;
+                background: Theme.surface;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                VerticalLayout {
+                    padding: Theme.s12;
+                    spacing: Theme.s8;
+
+                    if root.recent-events.length == 0 : Text {
+                        text: "No events recorded yet.";
+                        font-family: Theme.font-family;
+                        font-size: Theme.type-body;
+                        color: Theme.text-secondary;
+                    }
+
+                    for ev in root.recent-events : HorizontalLayout {
+                        spacing: Theme.s12;
+                        Text {
+                            width: 96px;
+                            text: ev.time-text;
+                            font-family: Theme.font-family;
+                            font-size: Theme.type-caption;
+                            color: Theme.text-secondary;
+                            vertical-alignment: center;
+                        }
+                        HxBadge {
+                            text: ev.severity-text;
+                            tone: ev.severity-tone;
+                        }
+                        Text {
+                            horizontal-stretch: 1;
+                            text: ev.message;
+                            font-family: Theme.font-family;
+                            font-size: Theme.type-body;
+                            color: Theme.text-primary;
+                            overflow: elide;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

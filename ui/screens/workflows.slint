@@ -1,0 +1,172 @@
+import { Theme } from "../themes/tokens.slint";
+import { WorkflowRowData } from "../types.slint";
+import {
+    HxBadge, HxButton, ButtonVariant, HxSectionHeader, HxEmptyState
+} from "../components/primitives.slint";
+import { ScrollView } from "std-widgets.slint";
+
+export component WorkflowsScreen inherits HorizontalLayout {
+    in property <[WorkflowRowData]> workflows;
+    in-out property <string> selected-workflow-id: "";
+    in property <WorkflowRowData> selected-workflow;
+    in property <bool> has-selection: false;
+
+    callback open-create-workflow();
+    callback select-workflow(string);
+    callback close-inspector();
+    callback cancel-workflow(string);
+
+    ScrollView {
+        horizontal-stretch: 1;
+
+        VerticalLayout {
+            padding: Theme.s24;
+            spacing: Theme.s16;
+
+            HxSectionHeader {
+                title: "Multi-Stage DAG Workflows";
+                subtitle: "Directed acyclic task orchestration with dependency validation and failure propagation";
+                HxButton {
+                    label: "Create Workflow";
+                    icon: @image-url("../../assets/icons/plus.svg");
+                    has-icon: true;
+                    variant: ButtonVariant.primary;
+                    clicked => { root.open-create-workflow(); }
+                }
+            }
+
+            if root.workflows.length == 0 : HxEmptyState {
+                title: "No workflows executed yet";
+                description: "Create a multi-stage DAG pipeline to run dependent computational tasks automatically.";
+            }
+
+            if root.workflows.length > 0 : VerticalLayout {
+                spacing: Theme.s12;
+                for wf in root.workflows : Rectangle {
+                    border-radius: Theme.r-md;
+                    background: wf.id == root.selected-workflow-id ? Theme.accent-soft : Theme.surface;
+                    border-width: 1px;
+                    border-color: wf.id == root.selected-workflow-id ? Theme.accent : Theme.border;
+                    animate background { duration: Theme.anim-fast; }
+
+                    wfta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.select-workflow(wf.id); }
+                    }
+
+                    HorizontalLayout {
+                        padding: Theme.s16;
+                        spacing: Theme.s16;
+                        alignment: space-between;
+
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: Theme.s4;
+                            Text {
+                                text: wf.name;
+                                font-family: Theme.font-family;
+                                font-size: Theme.type-section;
+                                font-weight: 600;
+                                color: Theme.text-primary;
+                            }
+                            Text {
+                                text: wf.description + " · " + wf.tasks-summary;
+                                font-family: Theme.font-family;
+                                font-size: Theme.type-caption;
+                                color: Theme.text-secondary;
+                                wrap: word-wrap;
+                            }
+                        }
+
+                        HorizontalLayout {
+                            spacing: Theme.s12;
+                            Text {
+                                text: wf.created-text;
+                                font-family: Theme.font-family;
+                                font-size: Theme.type-caption;
+                                color: Theme.text-secondary;
+                                vertical-alignment: center;
+                            }
+                            Rectangle {
+                                y: (parent.height - 24px) / 2;
+                                height: 24px;
+                                HxBadge { text: wf.status-text; tone: wf.status-tone; }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if root.has-selection : Rectangle {
+        width: 320px;
+        background: Theme.surface;
+
+        Rectangle {
+            x: 0px;
+            y: 0px;
+            width: 1px;
+            height: parent.height;
+            background: Theme.border;
+        }
+
+        ScrollView {
+            VerticalLayout {
+                padding: Theme.s16;
+                spacing: Theme.s16;
+
+                HorizontalLayout {
+                    alignment: space-between;
+                    Text {
+                        horizontal-stretch: 1;
+                        text: root.selected-workflow.name;
+                        font-family: Theme.font-family;
+                        font-size: Theme.type-title;
+                        font-weight: 600;
+                        color: Theme.text-primary;
+                        wrap: word-wrap;
+                    }
+                    HxButton {
+                        label: "Close";
+                        variant: ButtonVariant.ghost;
+                        control-height: 28px;
+                        clicked => { root.close-inspector(); }
+                    }
+                }
+
+                HxBadge {
+                    text: root.selected-workflow.status-text;
+                    tone: root.selected-workflow.status-tone;
+                }
+
+                if root.selected-workflow.can-cancel : HxButton {
+                    label: "Cancel Workflow";
+                    variant: ButtonVariant.destructive;
+                    clicked => { root.cancel-workflow(root.selected-workflow.id); }
+                }
+
+                VerticalLayout {
+                    spacing: Theme.s4;
+                    Text { text: "DAG Stages & Dependencies"; font-family: Theme.font-family; font-size: Theme.type-caption; font-weight: 600; color: Theme.text-secondary; }
+                    Rectangle {
+                        border-radius: Theme.r-sm;
+                        background: Theme.bg;
+                        border-width: 1px;
+                        border-color: Theme.border;
+                        VerticalLayout {
+                            padding: Theme.s12;
+                            Text {
+                                text: root.selected-workflow.stages-detail;
+                                font-family: Theme.font-family;
+                                font-size: Theme.type-caption;
+                                color: Theme.text-primary;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

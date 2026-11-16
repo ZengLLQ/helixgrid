@@ -1,0 +1,19 @@
+[package]
+name = "helixgrid-executor"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+helixgrid-config.workspace = true
+helixgrid-domain.workspace = true
+helixgrid-observability.workspace = true
+helixgrid-platform-windows.workspace = true
+helixgrid-protocol.workspace = true
+helixgrid-security.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+uuid.workspace = true

@@ -1,0 +1,31 @@
+[package]
+name = "helixgrid-studio"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "helixgrid"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+helixgrid-config.workspace = true
+helixgrid-core.workspace = true
+helixgrid-domain.workspace = true
+helixgrid-observability.workspace = true
+helixgrid-platform-windows.workspace = true
+helixgrid-resource.workspace = true
+helixgrid-storage.workspace = true
+helixgrid-ui-components.workspace = true
+serde_json.workspace = true
+slint.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[build-dependencies]
+slint-build.workspace = true
+winresource.workspace = true

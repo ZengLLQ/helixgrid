@@ -1,0 +1,95 @@
+[workspace]
+resolver = "2"
+members = [
+    "apps/helixgrid-studio",
+    "apps/helixgrid-worker",
+    "crates/helixgrid-domain",
+    "crates/helixgrid-protocol",
+    "crates/helixgrid-config",
+    "crates/helixgrid-observability",
+    "crates/helixgrid-security",
+    "crates/helixgrid-platform-windows",
+    "crates/helixgrid-storage",
+    "crates/helixgrid-resource",
+    "crates/helixgrid-worker-runtime",
+    "crates/helixgrid-executor",
+    "crates/helixgrid-scheduler",
+    "crates/helixgrid-core",
+    "crates/helixgrid-ui-components",
+    "benchmarks",
+    "tests",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+authors = ["HelixGrid Engineering"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/helixgrid/helixgrid"
+
+[workspace.dependencies]
+# Internal crates
+helixgrid-domain = { path = "crates/helixgrid-domain" }
+helixgrid-protocol = { path = "crates/helixgrid-protocol" }
+helixgrid-config = { path = "crates/helixgrid-config" }
+helixgrid-observability = { path = "crates/helixgrid-observability" }
+helixgrid-security = { path = "crates/helixgrid-security" }
+helixgrid-platform-windows = { path = "crates/helixgrid-platform-windows" }
+helixgrid-storage = { path = "crates/helixgrid-storage" }
+helixgrid-resource = { path = "crates/helixgrid-resource" }
+helixgrid-worker-runtime = { path = "crates/helixgrid-worker-runtime" }
+helixgrid-executor = { path = "crates/helixgrid-executor" }
+helixgrid-scheduler = { path = "crates/helixgrid-scheduler" }
+helixgrid-core = { path = "crates/helixgrid-core" }
+helixgrid-ui-components = { path = "crates/helixgrid-ui-components" }
+
+# Async & core runtime
+tokio = { version = "1.54.1", features = ["fs", "io-util", "macros", "net", "process", "rt", "rt-multi-thread", "signal", "sync", "time"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+uuid = { version = "1.29.2", features = ["v4", "serde"] }
+thiserror = "2.0.21"
+anyhow = "1.0.104"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["fmt", "env-filter", "json"] }
+time = { version = "0.3.55", features = ["formatting", "macros", "parsing", "serde"] }
+toml = "1.2.1"
+directories = "6.0.0"
+clap = { version = "4.6.7", features = ["derive"] }
+
+# Persistence
+rusqlite = { version = "0.43.0", features = ["bundled", "backup"] }
+
+# Desktop UI
+slint = { version = "1.19.0", default-features = false, features = ["std", "backend-winit", "renderer-femtovg", "renderer-software", "accessibility", "compat-1-2"] }
+slint-build = "1.19.0"
+
+# Windows native integration
+windows = { version = "0.62.2", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Com",
+    "Win32_System_JobObjects",
+    "Win32_System_Pipes",
+    "Win32_System_ProcessStatus",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_Common",
+    "Win32_UI_WindowsAndMessaging",
+] }
+winresource = "0.1.34"
+
+# Testing & benchmarking
+proptest = "1.12.0"
+tempfile = "3.27.0"
+criterion = "0.8.2"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
